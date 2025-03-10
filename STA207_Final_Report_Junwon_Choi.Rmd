@@ -1,0 +1,417 @@
+---
+title: "Investigating the Short and Long-term Effects of Small Class Sizes in Early education on Student Academic Achievement"
+subtitle: "An analysis of Project STAR"
+author: "Junwon Choi"
+date: "March 7, 2025"
+output:
+  html_document:
+    df_print: paged
+    number_sections: yes
+    code_folding: hide
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+table: yes
+# output:
+#   prettydoc::html_pretty:
+#     theme: architect
+#     toc: true
+#     css: styles.css
+#     includes:
+#       after_body: code_toggle.html
+# editor_options: 
+#   markdown: 
+#     wrap: 72
+# table: yes
+---
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.pos = 'H')
+```
+
+# Abstract
+
+
+# Introduction
+
+
+ 
+# Background & Motivation of Project STAR
+
+Project STAR, short for the **Student/Teacher Achievement Ratio Project**, emerged in the mid-1980s as a pioneering effort to explore the relationship between **class size** and **student academic outcomes**. Motivated by policy concerns regarding the efficacy of smaller classes, the study was funded by the Tennessee General Assembly and implemented as a randomized controlled trial. In this experiment, students and teachers were randomly assigned to one of three classroom environments—**small classes** (13–17 students), **regular classes** (22–25 students), and **regular classes with a teacher’s aide**. This design was intended to isolate the effect of class size on academic performance while controlling for potential confounders, thereby providing strong evidence on the causal impacts of educational settings.
+
+Beyond its initial focus on early childhood education, Project STAR was designed as a longitudinal study that followed students from kindergarten through third grade, and later into high school. This extended follow-up allowed researchers to investigate **long-term outcomes**, including high school achievement, graduation rates, and preparedness for higher education. The extensive dataset, which encompasses detailed academic records, teacher assessments, and demographic information, has been invaluable in shaping educational policy and research. By systematically analyzing the long-term effects of early educational interventions, Project STAR has contributed significantly to our understanding of how classroom environments influence academic trajectories and overall student success.
+
+## Dataset Details
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(car)
+library(MASS)
+library(broom)
+library(AER)
+library(foreign)
+library(forcats)
+library(tidyr)
+library(ggalluvial)
+library(plotly)
+
+STAR_Students <- read.spss('dataverse_files/PROJECT STAR/STAR_Students.sav', to.data.frame=TRUE)
+# Comparison_Students <- read.spss('dataverse_files/PROJECT STAR/Comparison_Students.sav', to.data.frame=TRUE)
+STAR_K3_Schools <- read.spss('dataverse_files/PROJECT STAR/STAR_K-3_Schools.sav', to.data.frame=TRUE)
+STAR_High_Schools <- read.spss('dataverse_files/PROJECT STAR/STAR_High_Schools.sav', to.data.frame=TRUE)
+```
+
+This investigation utilizes the **STAR-and-Beyond database** from the Harvard Dataverse, which contains detailed information on students, teachers, and schools involved in Project STAR. The dataset includes records from the original STAR study, as well as follow-up data from high school if available.
+
+The primary student-level data file contains information on 11,601 students who participated in the experimental phase for **at least one year** between 1985 and 1989. Information for each of
+grades K-3 includes:
+
+- Demographic variables
+- School and class identifiers
+- School and teacher information
+- Experimental condition ("class type")
+- Norm-referenced and criterion-referenced achievement test scores
+- Motivation and self-concept scores
+
+As part of the extended follow-up, added to the records of some or all students, include:
+
+-  Achievement test scores for the students when they were in grades 4 – 8, obtained from the Tennessee State Department of Education
+- Teachers’ ratings of student behavior in grades 4 and 8
+- Students’ self-reports of school engagement and peer effects in grade 8
+- Course taking in mathematics, science, and foreign language in high school, obtained from student transcripts
+- SAT/ACT participation and scores, obtained from ACT, Inc. and from Educational Testing Service
+- Graduation/dropout information, obtained from high school transcripts and the Tennessee State Department of Education
+
+*Note:* This investigation does not necessarily encompass all variables in the dataset, but rather focuses on key areas of interest related to class size and student achievement (discussed in the subsequent sections).
+
+# Experimental design of Project STAR
+
+Project STAR was initiated following the passage of House Bill (HB) 544 by the Tennessee Legislature in May 1985, aimed at investigating the effects of class size on student achievement and development in primary grades (K–3). The legislation outlined three primary research questions:
+
+1. What are the effects of reduced class sizes on student achievement (as measured by normed and criterion-referenced tests) and development outcomes such as self-concept and attendance?
+2. Are there cumulative advantages of remaining in smaller classes over multiple years compared to shorter-term exposure?
+3. Does specialized teacher training enhance student outcomes in reduced-size classes or classes assisted by teacher aides, compared to untrained teachers?
+
+To implement this study, the Tennessee State Department of Education established a research consortium involving representatives from the Department, State Board of Education, State Superintendents’ Association, and four Tennessee universities. The study adhered to an experimental design, randomly assigning students entering kindergarten in 1985 or first grade in 1986 to one of three class conditions:
+
+- **Small class (S):** 13–17 students
+- **Regular class (R):** 22–25 students
+- **Regular class with a full-time teacher aide (RA):** 22–25 students
+
+Randomization was executed by consortium members and supervised locally by university-affiliated graduate students, ensuring unbiased assignment based on gender, race, and socioeconomic status.
+
+## Selection of Schools
+
+All Tennessee schools were invited to participate under conditions set by the state, including the random assignment requirement, maintenance of standard school policies aside from class size adjustments, and commitment for four consecutive years. Of the initially interested 180 schools, 79 were ultimately selected from 42 districts to ensure representation of inner-city, suburban, urban, and rural settings:
+
+- 17 inner-city schools
+- 16 suburban schools
+- 8 urban schools
+- 38 rural schools
+
+Participation fluctuated slightly due to mergers and withdrawals, primarily attributed to challenges maintaining randomization and administrative burdens. Consequently, the number of participating schools ranged from 79 in kindergarten to 75 by third grade.
+
+## Operational Adjustments
+
+After the initial year, STAR administrators modified the study slightly by randomly redistributing half of the students between regular (R) and regular-aide (RA) classes for subsequent years due to no significant kindergarten performance differences found between these two groups. Small-class assignments remained unchanged. *This is a caveat that is addressed in the subsequent analysis.*
+
+Teacher training occurred for a subset of second-grade teachers, with no significant difference in student achievement outcomes observed between trained and untrained teachers. Student mobility also influenced class composition, with new entrants randomly assigned while maintaining small-class constraints. This "class size drift" was documented and considered in subsequent analyses.
+
+## Data Collection and Measures
+
+Academic performance was evaluated annually using the Stanford Achievement Tests (SATs) and the Tennessee Basic Skills First (BSF) tests. Student self-concept and motivation were measured using the SCAMIN inventory. Beyond third grade, additional longitudinal data were collected, including academic performance in grades 4–8 (via the Tennessee Comprehensive Assessment Program, TCAP), student participation and identification with school surveys, college entrance examination data (ACT/SAT), high school transcripts, and graduation/dropout information.
+
+These detailed design features and rigorous methodologies positioned Project STAR as a landmark experimental study capable of robustly determining the causal impacts of class size on educational outcomes. However, the project did not come without limitations and challenges.
+
+# Shortcomings of Project STAR
+
+Despite its robust experimental design, Project STAR has several notable limitations that should be acknowledged when interpreting its findings:
+
+## Attrition and Mobility Effects
+
+Project STAR experienced considerable student mobility, resulting in many students not remaining in their assigned class types throughout the study period. Such mobility led to a phenomenon known as "class size drift," where the actual sizes of regular classes sometimes became similar to those of small classes, potentially diluting the experimental contrast and complicating causal inference.
+
+## Generalizability Concerns
+
+The purposeful selection of schools, which aimed to cover diverse geographic and socioeconomic areas within Tennessee, might limit the external validity of the findings. Specifically, Project STAR schools were slightly larger and had slightly lower initial achievement scores compared to statewide averages, raising questions about how representative the findings are for other educational contexts.
+
+## Teacher Training and Implementation Fidelity
+
+The project provided only limited teacher training, which did not specifically equip teachers to leverage smaller class sizes effectively. Additionally, training was not uniformly administered, and there was no demonstrated impact of the training itself. Thus, differences in instructional quality or consistency across classes might have influenced outcomes, independent of class size.
+
+## Short-term vs. Long-term Effects
+
+Although the study was longitudinal, it only maintained controlled class-size conditions through grade three, after which students returned to standard-sized classes. The analysis of longer-term effects beyond third grade thus faces challenges in isolating the direct impact of early exposure to small classes from subsequent educational experiences.
+
+## Limited Control of Classroom Dynamics
+
+Aside from controlling for class size and the presence of aides, the study deliberately maintained "normal" school operations. This approach meant that other important classroom variables, such as teaching methods, curriculum variations, and peer dynamics, remained uncontrolled, potentially confounding the observed effects.
+
+# Key Conclusions from the Initial Analysis Report
+
+In the initial analysis of Project STAR data, we were primarily interested in answering the following two questions:
+
+**Primary question:** Are there any differences in math scaled scores in
+1st grade across class types?
+
+**Secondary question:** If there are differences, which class type is
+associated with the highest math scaled scores in 1st grade?
+
+To answer these questions, we adopted the following two-way ANOVA model with the following structure:
+
+$$Y_{ijk} = \mu_{..} + \alpha_{i} + \beta_{j} + \epsilon_{ijk}$$ where the index $i$ represents the class type: small ($i=1$), regular ($i=2$), regular with aide ($i=3$), and the index $j$ represents the school indicator. The rest of the parameters are as follows: 
+
+- $Y_{ijk}$: Mean math score of student $k$ in class $i$ at school $j$.
+- $\mu_{..}$: Overall mean math score 
+- $\alpha_{i}$: Main effect of class type $i$ with constraint $\sum_{i=1} \alpha_{i} = 0$ 
+- $\beta_{j}$: Main effect of school $j$ with constraint $\sum_{j=1} \beta_{j} = 0$ 
+- $\epsilon_{ijk}$: Random error in the math score of student $k$ in class
+$i$ at school $j$
+
+The assumptions of the two-way ANOVA model are as follows: 
+
+- **Independence:** The residuals $\epsilon_{ijk}$ are independent of each other 
+- **Normality:** The residuals $\epsilon_{ijk}$ are normally distributed 
+- **Homoscedasticity:** The variance of the residuals $\epsilon_{ijk}$ is constant across all levels of the independent variables
+
+We answered the primary question of interest by conducting an F-test to determine if there are significant differences in math scaled scores across class types. The null and alternative hypotheses were as follows:
+
+-   $H_0: \alpha_1 = \alpha_2 = \alpha_3 = 0$ (No significant differences in math scaled scores across class types)
+-   $H_A: \text{At least one } \alpha_i \neq 0$ (Significant differences in math scaled scores across class types)
+
+Assumptions for the F-test include the normality of residuals and homoscedasticity, which remain the same as the two-way ANOVA model.
+
+The F-test results indicated that the p-value for class type (`star1`) is less than 0.05, suggesting that **there are significant differences in math scaled scores across class types**. We rejected the null hypothesis and **concluded that at least one class type has a significantly different mean math score compared to the others**.
+
+We implemented the Tukey HSD test to find that students in **small classes have significantly higher math scores compared to students in regular classes and regular classes with an aide**. However, there was **no significant difference between regular classes and regular classes with an aide**.
+
+# Caveats of Initial Analysis Report
+
+While the initial analysis report provided some valuable insights into the short-term effects of class size on student math scores in 1st grade, several caveats and limitations should be considered:
+
+1. **Limited Focus on Math Scaled Scores:** The analysis primarily focused on math scaled scores as the outcome variable, neglecting other subjects or measures of student achievement. This narrow focus might not capture the full spectrum of educational outcomes influenced by class size. Utilizing scores from other subjects or broader achievement metrics could provide a more comprehensive understanding of the impact of class size on student learning. It would also allow for a more comprehensive comparison into the long-term effects of class size on student achievement.
+
+2. **Short-term Analysis:** The initial analysis only considered the math scores of 1st-grade students, providing a snapshot of the immediate effects of class size on academic performance. While this short-term perspective is valuable, it fails to capture the long-term implications of early educational experiences. A more comprehensive analysis that tracks student outcomes over multiple grades and years would offer a more nuanced understanding of how class size influences academic trajectories. This would require a longitudinal approach that follows students beyond the early grades and into high school and beyond.
+
+3. **Operational Adjustments Post-1st Grade:** The initial analysis did not account for the operational adjustments made after the first year of the study, such as the redistribution of students between regular and regular-aide classes. While most students who were designated to small classes continued in that setting, students in regular and regular-aide classes were randomly reassigned. In an update in 1999, it was reported that class size and pupil teacher ratios (PTR) are not the same, and that PTR does **not** influence student outcomes. Therefore for further analysis, it would be more efficient and accurate to consider the class sizes as either small or regular (with and without aide together).
+
+```{r, warning=FALSE}
+data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
+
+class_levels <- c("small", "regular", "regular-aide")
+data_alluvium <- data_alluvium %>%
+    mutate(across(everything(), 
+                  ~factor(as.numeric(.), levels = c(1, 2, 3), 
+                          labels = class_levels))) %>%
+    mutate(across(everything(), 
+                  ~fct_explicit_na(., na_level = "Unknown (NA)")))
+
+data_summary <- data_alluvium %>%
+    count(gkclasstype, g1classtype, g2classtype, g3classtype, name = "Freq") %>%
+    mutate(path_id = row_number())  
+
+data_long <- data_summary %>%
+    pivot_longer(cols = starts_with("g"), names_to = "grade", values_to = "class")
+
+data_long$grade <- factor(data_long$grade,
+            levels = c("gkclasstype", "g1classtype", "g2classtype","g3classtype"),
+            labels = c("Kindergarten", "Grade 1", "Grade 2", "Grade 3"))
+
+ggplot(data_long, aes(x = grade, stratum = class, alluvium = path_id, y = Freq, fill = class)) +
+    geom_flow(stat = "alluvium", alpha = 0.7) + 
+    geom_stratum() + 
+    scale_fill_manual(values = c("gold2", "skyblue2", "darkseagreen3", "lightcoral")) +
+    theme_minimal() +
+    labs(title = "Fig3.1: Alluvial Plot of Students' Transfer", x = "Grade", y = "") +
+    theme(legend.position = "right",
+          axis.text.x = element_text(hjust = 0.5),
+          axis.text.y = element_blank(),  
+          axis.ticks.y = element_blank(), 
+          axis.ticks.x = element_blank(), 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+```
+```{r}
+# Load required packages
+library(dplyr)
+library(tidyr)
+library(forcats)
+library(plotly)
+
+# --- Data Preparation ---
+# Subset the relevant columns from STAR_Students
+data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
+
+# Define the class levels and map numeric values to character labels
+class_levels <- c("small", "regular", "regular-aide")
+
+data_alluvium <- data_alluvium %>%
+  mutate(across(everything(), ~ factor(as.numeric(.),
+                                        levels = c(1, 2, 3),
+                                        labels = class_levels))) %>%
+  mutate(across(everything(), ~ fct_explicit_na(., na_level = "Unknown (NA)")))
+
+# Define grade labels for later use
+grade_mapping <- c("gkclasstype" = "Kindergarten",
+                   "g1classtype" = "Grade 1",
+                   "g2classtype" = "Grade 2",
+                   "g3classtype" = "Grade 3")
+
+# Create flows (transitions) between consecutive grades:
+# Kindergarten -> Grade 1, Grade 1 -> Grade 2, and Grade 2 -> Grade 3
+pairs <- list(c("gkclasstype", "g1classtype"),
+              c("g1classtype", "g2classtype"),
+              c("g2classtype", "g3classtype"))
+
+flow_list <- lapply(pairs, function(x) {
+  df_flow <- data_alluvium %>%
+    group_by(across(all_of(x))) %>%
+    summarise(value = n(), .groups = "drop") %>%
+    mutate(source = paste(grade_mapping[x[1]], ": ", .[[x[1]]], sep = ""),
+           target = paste(grade_mapping[x[2]], ": ", .[[x[2]]], sep = ""))
+  df_flow %>% select(source, target, value)
+})
+
+# Combine flows from all grade pairs
+transitions <- bind_rows(flow_list)
+
+# --- Build Nodes ---
+# Create a unique list of nodes (each is a "Grade: class" combination)
+nodes <- unique(c(transitions$source, transitions$target))
+nodes_df <- data.frame(name = nodes, stringsAsFactors = FALSE)
+# Plotly requires zero-indexed node numbering
+nodes_df$index <- seq_len(nrow(nodes_df)) - 1
+
+# Map the source and target labels to node indices
+transitions <- transitions %>%
+  left_join(nodes_df, by = c("source" = "name")) %>%
+  rename(source_index = index) %>%
+  left_join(nodes_df, by = c("target" = "name")) %>%
+  rename(target_index = index)
+
+# --- Create the Plotly Sankey Diagram ---
+p <- plot_ly(
+  type = "sankey",
+  orientation = "h",
+  node = list(
+    label = nodes_df$name,
+    pad = 15,
+    thickness = 20,
+    line = list(color = "black", width = 0.5)
+    # Customize node color if desired (e.g., color = "skyblue")
+  ),
+  link = list(
+    source = transitions$source_index,
+    target = transitions$target_index,
+    value = transitions$value,
+    # Here all links use the same color; customize if needed.
+    color = rep("skyblue", nrow(transitions))
+  )
+)
+
+p <- p %>% layout(
+  title = "Fig3.1: Alluvial Plot of Students' Transfer",
+  font = list(size = 10)
+)
+
+# Display the plot
+p
+
+```
+
+
+
+With these caveats in mind, we aim to extend the analysis of Project STAR data to explore the long-term effects of class size on student academic achievement. The natural **new question of interest** is:
+
+> For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?
+
+```{r}
+STAR_flag_vars <- c('flagsgk',
+               'flagsg1',
+               'flagsg2',
+               'flagsg3')
+
+Achievement_flag_vars <- c('flaggk',
+                           'flagg1',
+                           'flagg2',
+                           'flagg3',
+                           'flagg4',
+                           'flagg5',
+                           'flagg6',
+                           'flagg7',
+                           'flagg8')
+
+HS_College_flag_var <- c('flagsatact',
+                         'flaghscourse',
+                         'flaghsgraduate')
+```
+
+
+```{r}
+# Subset students who have Achievement_flag_vars and HS_College_flag_var columns == 'YES'
+All_Grades_Students <- STAR_Students %>%
+  filter(if_all(all_of(Achievement_flag_vars), ~ . == "YES") & 
+         if_all(all_of(HS_College_flag_var), ~ . == "YES"))
+
+All_Grades_Students
+```
+
+`hsgpaoverall`, `hssatconverted`, `hsactconverted`, `hsgrdcol`
+
+
+```{r}
+# Value counts in All_Grades_Students
+All_Grades_Students %>%
+  count(gkclasstype)
+
+All_Grades_Students %>%
+  count(g1classtype)
+
+All_Grades_Students %>%
+  count(g2classtype)
+
+All_Grades_Students %>%
+  count(g3classtype)
+
+
+```
+
+
+# Model Diagnostics & Sensitivity analysis 
+
+
+
+# Discussion 
+
+
+
+# Acknowledgement {-}
+
+I acknowledge and thank my classmates Hangyu Li and Shang Chen for their helpful discussions and sharing unique approaches to the analysis.
+
+# Reference {-}
+
+1. Harvard Dataverse. (n.d.). Project STAR: Student/Teacher Achievement Ratio Project. Retrieved March 4, 2025, from https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766
+
+2. Finn, J., Boyd-Zaharias, J., Fish, R., & Gerber, S. (2007, January). Project STAR and Beyond: Database User's Guide.
+
+3. Health & Education Research Operative Services (HEROS), Inc. (1999). Project STAR: Background & 1999 update. HEROS, Inc.
+
+
+# Session info {-}
+
+```{r}
+sessionInfo()
+```
