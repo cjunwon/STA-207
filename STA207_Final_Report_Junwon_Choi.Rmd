@@ -32,6 +32,10 @@ table: yes
 knitr::opts_chunk$set(fig.pos = 'H')
 ```
 
+Code and data files for this project are published on GitHub: [cjunwon/STA-207](https://github.com/cjunwon/STA-207)
+
+Original data source: [Harvard Dataverse: Tennessee's Student Teacher Achievement Ratio (STAR) project](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766)
+
 # Abstract
 
 
@@ -160,10 +164,10 @@ Aside from controlling for class size and the presence of aides, the study delib
 
 In the initial analysis of Project STAR data, we were primarily interested in answering the following two questions:
 
-**Primary question:** Are there any differences in math scaled scores in
+> **Primary question:** Are there any differences in math scaled scores in
 1st grade across class types?
 
-**Secondary question:** If there are differences, which class type is
+> **Secondary question:** If there are differences, which class type is
 associated with the highest math scaled scores in 1st grade?
 
 To answer these questions, we adopted the following two-way ANOVA model with the following structure:
@@ -205,93 +209,143 @@ While the initial analysis report provided some valuable insights into the short
 3. **Operational Adjustments Post-1st Grade:** The initial analysis did not account for the operational adjustments made after the first year of the study, such as the redistribution of students between regular and regular-aide classes. While most students who were designated to small classes continued in that setting, students in regular and regular-aide classes were randomly reassigned. In an update in 1999, it was reported that class size and pupil teacher ratios (PTR) are not the same, and that PTR does **not** influence student outcomes. Therefore for further analysis, it would be more efficient and accurate to consider the class sizes as either small or regular (with and without aide together).
 
 ```{r, warning=FALSE}
+
+
+# --- Data Preparation (same as before) ---
 data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
 
 class_levels <- c("small", "regular", "regular-aide")
-data_alluvium <- data_alluvium %>%
-    mutate(across(everything(), 
-                  ~factor(as.numeric(.), levels = c(1, 2, 3), 
-                          labels = class_levels))) %>%
-    mutate(across(everything(), 
-                  ~fct_explicit_na(., na_level = "Unknown (NA)")))
-
-data_summary <- data_alluvium %>%
-    count(gkclasstype, g1classtype, g2classtype, g3classtype, name = "Freq") %>%
-    mutate(path_id = row_number())  
-
-data_long <- data_summary %>%
-    pivot_longer(cols = starts_with("g"), names_to = "grade", values_to = "class")
-
-data_long$grade <- factor(data_long$grade,
-            levels = c("gkclasstype", "g1classtype", "g2classtype","g3classtype"),
-            labels = c("Kindergarten", "Grade 1", "Grade 2", "Grade 3"))
-
-ggplot(data_long, aes(x = grade, stratum = class, alluvium = path_id, y = Freq, fill = class)) +
-    geom_flow(stat = "alluvium", alpha = 0.7) + 
-    geom_stratum() + 
-    scale_fill_manual(values = c("gold2", "skyblue2", "darkseagreen3", "lightcoral")) +
-    theme_minimal() +
-    labs(title = "Fig3.1: Alluvial Plot of Students' Transfer", x = "Grade", y = "") +
-    theme(legend.position = "right",
-          axis.text.x = element_text(hjust = 0.5),
-          axis.text.y = element_blank(),  
-          axis.ticks.y = element_blank(), 
-          axis.ticks.x = element_blank(), 
-          panel.grid.major.y = element_blank(),
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.title = element_text(hjust = 0.5))
-```
-```{r}
-# Load required packages
-library(dplyr)
-library(tidyr)
-library(forcats)
-library(plotly)
-
-# --- Data Preparation ---
-# Subset the relevant columns from STAR_Students
-data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
-
-# Define the class levels and map numeric values to character labels
-class_levels <- c("small", "regular", "regular-aide")
-
 data_alluvium <- data_alluvium %>%
   mutate(across(everything(), ~ factor(as.numeric(.),
-                                        levels = c(1, 2, 3),
-                                        labels = class_levels))) %>%
+                                       levels = c(1, 2, 3),
+                                       labels = class_levels))) %>%
   mutate(across(everything(), ~ fct_explicit_na(., na_level = "Unknown (NA)")))
 
-# Define grade labels for later use
 grade_mapping <- c("gkclasstype" = "Kindergarten",
                    "g1classtype" = "Grade 1",
                    "g2classtype" = "Grade 2",
                    "g3classtype" = "Grade 3")
 
-# Create flows (transitions) between consecutive grades:
-# Kindergarten -> Grade 1, Grade 1 -> Grade 2, and Grade 2 -> Grade 3
 pairs <- list(c("gkclasstype", "g1classtype"),
               c("g1classtype", "g2classtype"),
               c("g2classtype", "g3classtype"))
 
 flow_list <- lapply(pairs, function(x) {
-  df_flow <- data_alluvium %>%
+  data_alluvium %>%
     group_by(across(all_of(x))) %>%
     summarise(value = n(), .groups = "drop") %>%
-    mutate(source = paste(grade_mapping[x[1]], ": ", .[[x[1]]], sep = ""),
-           target = paste(grade_mapping[x[2]], ": ", .[[x[2]]], sep = ""))
-  df_flow %>% select(source, target, value)
+    mutate(
+      source = paste(grade_mapping[x[1]], ": ", .[[x[1]]], sep = ""),
+      target = paste(grade_mapping[x[2]], ": ", .[[x[2]]], sep = "")
+    ) %>%
+    select(source, target, value)
 })
 
-# Combine flows from all grade pairs
 transitions <- bind_rows(flow_list)
 
-# --- Build Nodes ---
-# Create a unique list of nodes (each is a "Grade: class" combination)
+# Build nodes (unique 'Grade: Class' labels)
 nodes <- unique(c(transitions$source, transitions$target))
 nodes_df <- data.frame(name = nodes, stringsAsFactors = FALSE)
-# Plotly requires zero-indexed node numbering
+nodes_df$index <- seq_len(nrow(nodes_df)) - 1
+
+# Map source/target to their indices
+transitions <- transitions %>%
+  left_join(nodes_df, by = c("source" = "name")) %>%
+  rename(source_index = index) %>%
+  left_join(nodes_df, by = c("target" = "name")) %>%
+  rename(target_index = index)
+
+# --- Assign colors by class type ---
+# 1. Extract class type from the node name (e.g., "Kindergarten: small" -> "small")
+get_class <- function(x) sub(".*: ", "", x)
+
+nodes_df$class_type <- sapply(nodes_df$name, get_class)
+
+# 2. Define a color palette matching your desired look
+class_colors <- c(
+  "small"        = "#F5C310",  # yellow
+  "regular"      = "#0072B2",  # blue
+  "regular-aide" = "#009E73",  # green
+  "Unknown (NA)" = "#D55E00"   # reddish/orange
+)
+
+# 3. Map each node to the appropriate color
+nodes_df$color <- class_colors[nodes_df$class_type]
+
+# For the links, color them by the source node’s class (so flows keep the same color as the source)
+transitions$link_color <- scales::alpha(nodes_df$color[ match(transitions$source, nodes_df$name) ], 0.4)
+
+
+# --- Create the Plotly Sankey Diagram ---
+p <- plot_ly(
+  type = "sankey",
+  orientation = "h",
+  # "snap" places nodes in vertical columns by shared x-coordinates
+  arrangement = "snap",
+  node = list(
+    label = nodes_df$name,
+    pad = 15,
+    thickness = 20,
+    line = list(color = "black", width = 0.5),
+    color = nodes_df$color
+  ),
+  link = list(
+    source = transitions$source_index,
+    target = transitions$target_index,
+    value = transitions$value,
+    color = transitions$link_color,
+    opacity = 0.1
+  )
+) %>%
+  layout(
+    title = "Alluvial Diagram of Students' Transfer",
+    font = list(size = 10),
+    width = 800
+  )
+
+p
+
+```
+
+```{r, warning=FALSE}
+# --- Data Preparation ---
+# 1) Subset only the relevant columns
+# 2) Remove rows that have any NA values
+# 3) Convert numeric codes to factor levels
+data_alluvium <- STAR_Students %>%
+  select(gkclasstype, g1classtype, g2classtype, g3classtype) %>%
+  drop_na() %>%
+  mutate(across(everything(), ~ factor(as.numeric(.),
+                                       levels = c(1, 2, 3),
+                                       labels = c("small", "regular", "regular-aide"))))
+
+grade_mapping <- c("gkclasstype" = "Kindergarten",
+                   "g1classtype" = "Grade 1",
+                   "g2classtype" = "Grade 2",
+                   "g3classtype" = "Grade 3")
+
+# Create flows between consecutive grades
+pairs <- list(c("gkclasstype", "g1classtype"),
+              c("g1classtype", "g2classtype"),
+              c("g2classtype", "g3classtype"))
+
+flow_list <- lapply(pairs, function(x) {
+  data_alluvium %>%
+    group_by(across(all_of(x))) %>%
+    summarise(value = n(), .groups = "drop") %>%
+    mutate(
+      source = paste(grade_mapping[x[1]], ": ", .[[x[1]]], sep = ""),
+      target = paste(grade_mapping[x[2]], ": ", .[[x[2]]], sep = "")
+    ) %>%
+    select(source, target, value)
+})
+
+# Combine all flows
+transitions <- bind_rows(flow_list)
+
+# --- Build the nodes data frame ---
+nodes <- unique(c(transitions$source, transitions$target))
+nodes_df <- data.frame(name = nodes, stringsAsFactors = FALSE)
 nodes_df$index <- seq_len(nrow(nodes_df)) - 1
 
 # Map the source and target labels to node indices
@@ -301,47 +355,93 @@ transitions <- transitions %>%
   left_join(nodes_df, by = c("target" = "name")) %>%
   rename(target_index = index)
 
+# --- Assign colors by class type ---
+# Extract the class type from each node name (e.g., "Kindergarten: small" -> "small")
+get_class <- function(x) sub(".*: ", "", x)
+nodes_df$class_type <- sapply(nodes_df$name, get_class)
+
+# Define a color palette for each class type
+class_colors <- c(
+  "small"        = "#F5C310",  # yellow
+  "regular"      = "#0072B2",  # blue
+  "regular-aide" = "#009E73"   # green
+)
+
+# Assign node colors based on class type
+nodes_df$color <- class_colors[nodes_df$class_type]
+
+# For link colors, match the source node’s color
+transitions$link_color <- scales::alpha(nodes_df$color[ match(transitions$source, nodes_df$name) ], 0.4)
+
 # --- Create the Plotly Sankey Diagram ---
 p <- plot_ly(
   type = "sankey",
   orientation = "h",
+  arrangement = "snap",  # places nodes in columns
   node = list(
     label = nodes_df$name,
     pad = 15,
     thickness = 20,
-    line = list(color = "black", width = 0.5)
-    # Customize node color if desired (e.g., color = "skyblue")
+    line = list(color = "black", width = 0.5),
+    color = nodes_df$color
   ),
   link = list(
     source = transitions$source_index,
     target = transitions$target_index,
     value = transitions$value,
-    # Here all links use the same color; customize if needed.
-    color = rep("skyblue", nrow(transitions))
+    color = transitions$link_color
   )
-)
+) %>%
+  layout(
+    title = "Alluvial Diagram of Students' Transfer (NA Removed)",
+    font = list(size = 10),
+    width = 800
+  )
 
-p <- p %>% layout(
-  title = "Fig3.1: Alluvial Plot of Students' Transfer",
-  font = list(size = 10)
-)
-
-# Display the plot
 p
-
 ```
-
 
 
 With these caveats in mind, we aim to extend the analysis of Project STAR data to explore the long-term effects of class size on student academic achievement. The natural **new question of interest** is:
 
-> For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?
+> **Extended question:** For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?
+
+# Answering the New Question of Interest by Addressing the Caveats
+
+One more point to keep in mind is that Tennessee implemented a new student assessment system the year STAR students entered grade 4, the Tennessee Comprehensive Assessment Program (TCAP). The TCAP assessment battery included norm-referenced tests from the Comprehensive Tests of Basic Skills (CTBS/McGraw Hill, 1989) and BSF criterion-referenced tests for each grade in reading and mathematics. Scores on these tests were made available by the Tennessee State Department of Education, as students progressed from grade 4 (1989-1990) through grade 8 (1993-1994).
+
+The user guide notes that "Scores on the CTBS are not directly comparable to those on the SATs. However, IRT scale scores were available for each CTBS subtest so that comparisons can be made meaningfully across grades 4—8." Hence the scaled scores are valid for comparison across grades 4-8.
+
+## Subsetting the Data for Appropriate Analysis
+
+The new question of interest requires a subset of students who have completed both primary and secondary education, and that we have complete data on their academic performance and college readiness. To achieve this, we will filter the dataset to include only students who have complete data using the flags in the data file the binary flag variables indicate participation/non-participation at each stage of data collection.
+
+| Flag Type                | Variable Name     | Description                                      |
+|--------------------------|------------------|--------------------------------------------------|
+| **In-STAR Flags**        | `flagsgk`        | In STAR in kindergarten                         |
+|                          | `flagsg1`        | In STAR in grade 1                              |
+|                          | `flagsg2`        | In STAR in grade 2                              |
+|                          | `flagsg3`        | In STAR in grade 3                              |
+| **Achievement-data Flags** | `flaggk`        | Achievement data available kindergarten         |
+|                          | `flagg1`        | Achievement data available grade 1             |
+|                          | `flagg2`        | Achievement data available grade 2             |
+|                          | `flagg3`        | Achievement data available grade 3             |
+|                          | `flagg4`        | Achievement data available grade 4             |
+|                          | `flagg5`        | Achievement data available grade 5             |
+|                          | `flagg6`        | Achievement data available grade 6             |
+|                          | `flagg7`        | Achievement data available grade 7             |
+|                          | `flagg8`        | Achievement data available grade 8             |
+| **High School Data Flags** | `flagsatact`   | Valid SAT/ACT score available                   |
+|                          | `flaghscourse`   | At least two years of high school course data  |
+|                          | `flaghsgraduate` | Data on high school graduation status available |
+
+Our subset will require **Achievement-data Flags** and **High School Data Flags** to be "YES" for each student. This ensures that we have complete data on student achievement from kindergarten through grade 8 and high school graduation status. We should note that the question of interest is specific to students who have completed both primary and secondary education. Therefore any concerns for selection bias is beyond the scope of this analysis.
 
 ```{r}
-STAR_flag_vars <- c('flagsgk',
-               'flagsg1',
-               'flagsg2',
-               'flagsg3')
+STAR_flag_vars <- c('FLAGSGK',
+                    'FLAGSG1',
+                    'FLAGSG2',
+                    'FLAGSG3')
 
 Achievement_flag_vars <- c('flaggk',
                            'flagg1',
@@ -356,37 +456,199 @@ Achievement_flag_vars <- c('flaggk',
 HS_College_flag_var <- c('flagsatact',
                          'flaghscourse',
                          'flaghsgraduate')
-```
 
-
-```{r}
 # Subset students who have Achievement_flag_vars and HS_College_flag_var columns == 'YES'
 All_Grades_Students <- STAR_Students %>%
   filter(if_all(all_of(Achievement_flag_vars), ~ . == "YES") & 
          if_all(all_of(HS_College_flag_var), ~ . == "YES"))
-
-All_Grades_Students
 ```
 
-`hsgpaoverall`, `hssatconverted`, `hsactconverted`, `hsgrdcol`
-
+### Data Completeness and Proportion of Students with Complete Data for Longitudinal Analysis
 
 ```{r}
-# Value counts in All_Grades_Students
-All_Grades_Students %>%
-  count(gkclasstype)
+Achievement_data_students <- STAR_Students %>%
+  filter(if_all(all_of(Achievement_flag_vars), ~ . == "YES"))
 
-All_Grades_Students %>%
-  count(g1classtype)
+HS_College_data_students <- STAR_Students %>%
+  filter(if_all(all_of(HS_College_flag_var), ~ . == "YES"))
 
-All_Grades_Students %>%
-  count(g2classtype)
+student_count <- nrow(STAR_Students)
 
-All_Grades_Students %>%
-  count(g3classtype)
+## --- Pie Chart 1: Achievement Data Completeness ---
+complete_student_count1 <- nrow(Achievement_data_students)
+incomplete_student_count1 <- student_count - complete_student_count1
+counts1 <- c(complete_student_count1, incomplete_student_count1)
+percent1 <- round(100 * counts1 / student_count, 1)
+labels1 <- paste(c("Data Available", "Data \n Unavailable"), 
+                 "\nCount:", counts1, 
+                 "\n", percent1, "%")
 
+## --- Pie Chart 2: High School Data Completeness ---
+complete_student_count2 <- nrow(HS_College_data_students)
+incomplete_student_count2 <- student_count - complete_student_count2
+counts2 <- c(complete_student_count2, incomplete_student_count2)
+percent2 <- round(100 * counts2 / student_count, 1)
+labels2 <- paste(c("Data Available", "Data \n Unavailable"), 
+                 "\nCount:", counts2, 
+                 "\n", percent2, "%")
+
+## --- Pie Chart 3: Achievement & High School Data Completeness ---
+complete_student_count3 <- nrow(All_Grades_Students)
+incomplete_student_count3 <- student_count - complete_student_count3
+counts3 <- c(complete_student_count3, incomplete_student_count3)
+percent3 <- round(100 * counts3 / student_count, 1)
+labels3 <- paste(c("Data Available", "Data \n Unavailable"), 
+                 "\nCount:", counts3, 
+                 "\n", percent3, "%")
+
+## --- Create a 1x3 layout and plot the pie charts ---
+par(mfrow = c(2, 2), mar = c(1, 4, 1, 4))  # Adjust margins if needed
+
+pie(counts1, labels = labels1, 
+    main = "Achievement Data Completeness", col = c("lightblue", "lightgray"))
+pie(counts2, labels = labels2, 
+    main = "High School Data Completeness", col = c("lightgreen", "lightgray"))
+pie(counts3, labels = labels3, 
+    main = "Achievement & High School Completeness", col = c("lightcoral", "lightgray"))
+
+# Optionally, reset the plotting layout back to default:
+par(mfrow = c(1, 1))
 
 ```
+
+We notice that the proportion of students with complete data for both achievement and high school/college readiness is relatively low compared to the total number of students in the dataset. This highlights the challenges associated with longitudinal studies and the importance of data completeness for robust analyses. Despite the limitations, we are still left with **546 students** who have complete data for the longitudinal analysis.
+
+*Any results or conclusions beyond this point is based on these 546 students who have complete data for the analysis.*
+
+### Variables of Interest for Longitudinal Analysis
+
+We keep the following variables for the longitudinal analysis:
+
+| Type                | Variable Name     | Description                                      |
+|--------------------------|------------------|--------------------------------------------------|
+| **Demographic Variables**        | `stdntid`        | Student ID        |
+| **Class Type & STAR Participation** | `gkclasstype`        | Class type in kindergarten                         |
+|                          | `g1classtype`        | Class type in grade 1          |
+|                          | `g2classtype`        | Class type in grade 2 |
+|                          | `g3classtype`        | Class type in grade 3 |
+| | `cmpstype` | Class type composite |
+| | `cmpsdura` | Duration composite |
+| | `yearsstar` | Number of years in STAR |
+| **Reading & Math Scores** | `gktreadss`        |    Total reading scaled score SAT kindergarten      |
+|                          | `gktmathss`        |      Total math scaled score SAT kindergarten      |
+|                          | `g1treadss`        |  Total reading scale scores SAT Grade 1  |
+|                          | `g1tmathss`        |    Total math scale scores SAT Grade 1
+|                          | `g2treadss`        |  Total math scale scores SAT Grade 2    |
+|                          | `g2tmathss`        |    Total reading scale scores SAT Grade 2    |
+|                          | `g3treadss`        |  Total math scale scores SAT Grade 3    |
+|                          | `g3tmathss`        |    Total reading scale scores SAT Grade 3    |
+|                          | `g4treadss`        |  Total math scale scores CTBS Grade 4    |
+|                          | `g4tmathss`        |    Total reading scale scores CTBS Grade 4    |
+|                          | `g5treadss`        |  Total math scale scores CTBS Grade 5    |
+|                          | `g5tmathss`        |    Total reading scale scores CTBS Grade 5    |
+|                          | `g6treadss`        |  Total math scale scores CTBS Grade 6    |
+|                          | `g6tmathss`        |    Total reading scale scores CTBS Grade 6    |
+|                          | `g7treadss`        |  Total math scale scores CTBS Grade 7    |
+|                          | `g7tmathss`        |    Total reading scale scores CTBS Grade 7    |
+|                          | `g8treadss`        |  Total math scale scores CTBS Grade 8    |
+|                          | `g8tmathss`        |    Total reading scale scores CTBS Grade 8    |
+| **High School Performance** | `hsgpaoverall`   |   GPA overall high school       |
+|                          | `hsactcomp`   | ACT composite score high school |
+|                          | `hsactconverted` | SAT --> ACT (test score reported in ACT composite metric) high school |
+|                          | `hsgrdcol` | High school graduation status |
+
+```{r}
+SAT_students <- STAR_Students %>%
+  filter(hssat == "YES" & hsact == "NO")
+
+ACT_students <- STAR_Students %>%
+  filter(hsact == "YES" & hssat == "NO")
+
+SAT_ACT_students <- STAR_Students %>%
+  filter(hssat == "YES" & hsact == "YES")
+
+no_SAT_ACT_students <- STAR_Students %>%
+  filter(hssat == "NO" & hsact == "NO")
+
+num_SAT_students <- nrow(SAT_students)
+num_ACT_students <- nrow(ACT_students)
+num_SAT_ACT_students <- nrow(SAT_ACT_students)
+num_no_SAT_ACT_students <- nrow(no_SAT_ACT_students)
+
+
+df <- data.frame(
+  Category = c("SAT Only", "ACT Only", "Both SAT & ACT", "Neither SAT nor ACT"),
+  Count = c(num_SAT_students, num_ACT_students, num_SAT_ACT_students, num_no_SAT_ACT_students)
+)
+
+
+df$Percentage <- round(df$Count / sum(df$Count) * 100, 1)
+
+
+pie_chart4 <- plot_ly(
+  data = df,
+  labels = ~Category,
+  values = ~Percentage, 
+  type = 'pie',
+  textinfo = 'percent',
+  hoverinfo = 'label+percent+text',
+  text = ~paste0("Count: ", Count),  # Show count on hover
+  marker = list(colors = c("lightblue", "lightgreen", "lightcoral", "lightgray")),
+  title = "SAT and ACT Participation",
+  width = 500, height = 400
+)
+
+# change order of slices
+
+
+pie_chart4
+```
+
+To help us utilize standardized college entrance exam scores, we need both ACT and SAT scores to be comparable (i.e. on the same scale). The ACT scores can range between 1 to 36, while the SAT scores can range between 400 to 1600 during the time of the study. While the SAT score ranges changed over time, at the time of this report, it has reverted back to the same 400-1600 scale.
+
+Converting the scores to match either exam scale will inevitably lead to some loss of information, but it is necessary for meaningful comparisons. **To minimize this loss of information**, we will keep the popular ACT composite score, `hsactcomp` (taken by 29% of students), as is and utilize the converted SAT composite to ACT score (`hsactconverted`) for the analysis.
+
+```{r}
+variables_of_interest <- c(
+  'stdntid',
+  'gender',
+  'race',
+  'gktreadss',
+  'gktmathss',
+  'g1treadss',
+  'g1tmathss',
+  'g2treadss',
+  'g2tmathss',
+  'g3treadss',
+  'g3tmathss',
+  'g4treadss',
+  'g4tmathss',
+  'g5treadss',
+  'g5tmathss',
+  'g6treadss',
+  'g6tmathss',
+  'g7treadss',
+  'g7tmathss',
+  'g8treadss',
+  'g8tmathss',
+  'hsgpaoverall',
+  'hssatconverted',
+  'hsactconverted',
+  'hsgrdcol'
+)
+
+```
+
+
+## Supporting Analysis 1: Impact of Class Size on High School GPA
+
+
+
+
+## Supporting Analysis 2: Impact of Class Size on College Readiness (ACT/SAT Scores)
+
+
+## Supporting Analysis 3: Impact of Class Size on High School Graduation Rates
 
 
 # Model Diagnostics & Sensitivity analysis 
