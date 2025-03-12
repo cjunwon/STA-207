@@ -34,6 +34,10 @@ knitr::opts_chunk$set(fig.pos = 'H')
 
 Code and data files for this project are published on GitHub: [cjunwon/STA-207](https://github.com/cjunwon/STA-207)
 
+Initial report can be downloaded from [here](https://github.com/cjunwon/STA-207/blob/main/STA207_Initial_Analysis_Report_Junwon_Choi.html).
+
+To skip to **key conclusions** from the initial analysis and **new results**, click [here](#key-conclusions).
+
 Original data source: [Harvard Dataverse: Tennessee's Student Teacher Achievement Ratio (STAR) project](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766)
 
 # Abstract
@@ -67,6 +71,7 @@ library(forcats)
 library(tidyr)
 library(ggalluvial)
 library(plotly)
+library(patchwork)
 
 STAR_Students <- read.spss('dataverse_files/PROJECT STAR/STAR_Students.sav', to.data.frame=TRUE)
 # Comparison_Students <- read.spss('dataverse_files/PROJECT STAR/Comparison_Students.sav', to.data.frame=TRUE)
@@ -160,7 +165,7 @@ Although the study was longitudinal, it only maintained controlled class-size co
 
 Aside from controlling for class size and the presence of aides, the study deliberately maintained "normal" school operations. This approach meant that other important classroom variables, such as teaching methods, curriculum variations, and peer dynamics, remained uncontrolled, potentially confounding the observed effects.
 
-# Key Conclusions from the Initial Analysis Report
+# Key Conclusions from the Initial Analysis Report {#key-conclusions}
 
 In the initial analysis of Project STAR data, we were primarily interested in answering the following two questions:
 
@@ -209,9 +214,6 @@ While the initial analysis report provided some valuable insights into the short
 3. **Operational Adjustments Post-1st Grade:** The initial analysis did not account for the operational adjustments made after the first year of the study, such as the redistribution of students between regular and regular-aide classes. While most students who were designated to small classes continued in that setting, students in regular and regular-aide classes were randomly reassigned. In an update in 1999, it was reported that class size and pupil teacher ratios (PTR) are not the same, and that PTR does **not** influence student outcomes. Therefore for further analysis, it would be more efficient and accurate to consider the class sizes as either small or regular (with and without aide together).
 
 ```{r, warning=FALSE}
-
-
-# --- Data Preparation (same as before) ---
 data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
 
 class_levels <- c("small", "regular", "regular-aide")
@@ -243,25 +245,22 @@ flow_list <- lapply(pairs, function(x) {
 
 transitions <- bind_rows(flow_list)
 
-# Build nodes (unique 'Grade: Class' labels)
 nodes <- unique(c(transitions$source, transitions$target))
 nodes_df <- data.frame(name = nodes, stringsAsFactors = FALSE)
 nodes_df$index <- seq_len(nrow(nodes_df)) - 1
 
-# Map source/target to their indices
 transitions <- transitions %>%
   left_join(nodes_df, by = c("source" = "name")) %>%
   rename(source_index = index) %>%
   left_join(nodes_df, by = c("target" = "name")) %>%
   rename(target_index = index)
 
-# --- Assign colors by class type ---
-# 1. Extract class type from the node name (e.g., "Kindergarten: small" -> "small")
+
 get_class <- function(x) sub(".*: ", "", x)
 
 nodes_df$class_type <- sapply(nodes_df$name, get_class)
 
-# 2. Define a color palette matching your desired look
+
 class_colors <- c(
   "small"        = "#F5C310",  # yellow
   "regular"      = "#0072B2",  # blue
@@ -269,18 +268,17 @@ class_colors <- c(
   "Unknown (NA)" = "#D55E00"   # reddish/orange
 )
 
-# 3. Map each node to the appropriate color
 nodes_df$color <- class_colors[nodes_df$class_type]
 
-# For the links, color them by the source node’s class (so flows keep the same color as the source)
+
 transitions$link_color <- scales::alpha(nodes_df$color[ match(transitions$source, nodes_df$name) ], 0.4)
 
 
-# --- Create the Plotly Sankey Diagram ---
+
 p <- plot_ly(
   type = "sankey",
   orientation = "h",
-  # "snap" places nodes in vertical columns by shared x-coordinates
+
   arrangement = "snap",
   node = list(
     label = nodes_df$name,
@@ -308,10 +306,7 @@ p
 ```
 
 ```{r, warning=FALSE}
-# --- Data Preparation ---
-# 1) Subset only the relevant columns
-# 2) Remove rows that have any NA values
-# 3) Convert numeric codes to factor levels
+
 data_alluvium <- STAR_Students %>%
   select(gkclasstype, g1classtype, g2classtype, g3classtype) %>%
   drop_na() %>%
@@ -324,7 +319,7 @@ grade_mapping <- c("gkclasstype" = "Kindergarten",
                    "g2classtype" = "Grade 2",
                    "g3classtype" = "Grade 3")
 
-# Create flows between consecutive grades
+
 pairs <- list(c("gkclasstype", "g1classtype"),
               c("g1classtype", "g2classtype"),
               c("g2classtype", "g3classtype"))
@@ -340,44 +335,42 @@ flow_list <- lapply(pairs, function(x) {
     select(source, target, value)
 })
 
-# Combine all flows
+
 transitions <- bind_rows(flow_list)
 
-# --- Build the nodes data frame ---
+
 nodes <- unique(c(transitions$source, transitions$target))
 nodes_df <- data.frame(name = nodes, stringsAsFactors = FALSE)
 nodes_df$index <- seq_len(nrow(nodes_df)) - 1
 
-# Map the source and target labels to node indices
+
 transitions <- transitions %>%
   left_join(nodes_df, by = c("source" = "name")) %>%
   rename(source_index = index) %>%
   left_join(nodes_df, by = c("target" = "name")) %>%
   rename(target_index = index)
 
-# --- Assign colors by class type ---
-# Extract the class type from each node name (e.g., "Kindergarten: small" -> "small")
+
 get_class <- function(x) sub(".*: ", "", x)
 nodes_df$class_type <- sapply(nodes_df$name, get_class)
 
-# Define a color palette for each class type
 class_colors <- c(
   "small"        = "#F5C310",  # yellow
   "regular"      = "#0072B2",  # blue
   "regular-aide" = "#009E73"   # green
 )
 
-# Assign node colors based on class type
+
 nodes_df$color <- class_colors[nodes_df$class_type]
 
-# For link colors, match the source node’s color
+
 transitions$link_color <- scales::alpha(nodes_df$color[ match(transitions$source, nodes_df$name) ], 0.4)
 
-# --- Create the Plotly Sankey Diagram ---
+
 p <- plot_ly(
   type = "sankey",
   orientation = "h",
-  arrangement = "snap",  # places nodes in columns
+  arrangement = "snap",
   node = list(
     label = nodes_df$name,
     pad = 15,
@@ -474,7 +467,7 @@ HS_College_data_students <- STAR_Students %>%
 
 student_count <- nrow(STAR_Students)
 
-## --- Pie Chart 1: Achievement Data Completeness ---
+
 complete_student_count1 <- nrow(Achievement_data_students)
 incomplete_student_count1 <- student_count - complete_student_count1
 counts1 <- c(complete_student_count1, incomplete_student_count1)
@@ -483,7 +476,7 @@ labels1 <- paste(c("Data Available", "Data \n Unavailable"),
                  "\nCount:", counts1, 
                  "\n", percent1, "%")
 
-## --- Pie Chart 2: High School Data Completeness ---
+
 complete_student_count2 <- nrow(HS_College_data_students)
 incomplete_student_count2 <- student_count - complete_student_count2
 counts2 <- c(complete_student_count2, incomplete_student_count2)
@@ -492,7 +485,7 @@ labels2 <- paste(c("Data Available", "Data \n Unavailable"),
                  "\nCount:", counts2, 
                  "\n", percent2, "%")
 
-## --- Pie Chart 3: Achievement & High School Data Completeness ---
+
 complete_student_count3 <- nrow(All_Grades_Students)
 incomplete_student_count3 <- student_count - complete_student_count3
 counts3 <- c(complete_student_count3, incomplete_student_count3)
@@ -501,8 +494,8 @@ labels3 <- paste(c("Data Available", "Data \n Unavailable"),
                  "\nCount:", counts3, 
                  "\n", percent3, "%")
 
-## --- Create a 1x3 layout and plot the pie charts ---
-par(mfrow = c(2, 2), mar = c(1, 4, 1, 4))  # Adjust margins if needed
+
+par(mfrow = c(2, 2), mar = c(1, 4, 1, 4))
 
 pie(counts1, labels = labels1, 
     main = "Achievement Data Completeness", col = c("lightblue", "lightgray"))
@@ -511,7 +504,7 @@ pie(counts2, labels = labels2,
 pie(counts3, labels = labels3, 
     main = "Achievement & High School Completeness", col = c("lightcoral", "lightgray"))
 
-# Optionally, reset the plotting layout back to default:
+
 par(mfrow = c(1, 1))
 
 ```
@@ -592,27 +585,121 @@ pie_chart4 <- plot_ly(
   type = 'pie',
   textinfo = 'percent',
   hoverinfo = 'label+percent+text',
-  text = ~paste0("Count: ", Count),  # Show count on hover
+  text = ~paste0("Count: ", Count),
   marker = list(colors = c("lightblue", "lightgreen", "lightcoral", "lightgray")),
-  title = "SAT and ACT Participation",
+  title = "SAT and ACT Participation (all students)",
   width = 500, height = 400
 )
 
-# change order of slices
-
-
-pie_chart4
 ```
+
+```{r}
+SAT_students <- All_Grades_Students %>%
+  filter(hssat == "YES" & hsact == "NO")
+
+ACT_students <- All_Grades_Students %>%
+  filter(hsact == "YES" & hssat == "NO")
+
+SAT_ACT_students <- All_Grades_Students %>%
+  filter(hssat == "YES" & hsact == "YES")
+
+no_SAT_ACT_students <- All_Grades_Students %>%
+  filter(hssat == "NO" & hsact == "NO")
+
+num_SAT_students <- nrow(SAT_students)
+num_ACT_students <- nrow(ACT_students)
+num_SAT_ACT_students <- nrow(SAT_ACT_students)
+num_no_SAT_ACT_students <- nrow(no_SAT_ACT_students)
+
+
+df <- data.frame(
+  Category = c("SAT Only", "ACT Only", "Both SAT & ACT", "Neither SAT nor ACT"),
+  Count = c(num_SAT_students, num_ACT_students, num_SAT_ACT_students, num_no_SAT_ACT_students)
+)
+
+
+df$Percentage <- round(df$Count / sum(df$Count) * 100, 1)
+
+
+pie_chart5 <- plot_ly(
+  data = df,
+  labels = ~Category,
+  values = ~Percentage, 
+  type = 'pie',
+  textinfo = 'percent',
+  hoverinfo = 'label+percent+text',
+  text = ~paste0("Count: ", Count),
+  marker = list(colors = c("lightblue", "lightgreen", "lightcoral", "lightgray")),
+  title = "SAT and ACT Participation (subsetted students)",
+  width = 500, height = 400
+)
+
+```
+
+```{r}
+# Subset data for STAR_Students
+SAT_students <- STAR_Students[STAR_Students$hssat == "YES" & STAR_Students$hsact == "NO", ]
+ACT_students <- STAR_Students[STAR_Students$hsact == "YES" & STAR_Students$hssat == "NO", ]
+SAT_ACT_students <- STAR_Students[STAR_Students$hssat == "YES" & STAR_Students$hsact == "YES", ]
+no_SAT_ACT_students <- STAR_Students[STAR_Students$hssat == "NO" & STAR_Students$hsact == "NO", ]
+
+num_SAT_students <- nrow(SAT_students)
+num_ACT_students <- nrow(ACT_students)
+num_SAT_ACT_students <- nrow(SAT_ACT_students)
+num_no_SAT_ACT_students <- nrow(no_SAT_ACT_students)
+
+# Data for first pie chart
+counts1 <- c(num_ACT_students, num_SAT_students, num_SAT_ACT_students, num_no_SAT_ACT_students)
+labels1 <- c("ACT Only", "SAT Only", "Both SAT & ACT", "Neither SAT nor ACT")
+percentages1 <- round(counts1 / sum(counts1) * 100, 1)
+labels1 <- paste(labels1, "\n", percentages1, "%")
+
+# Subset data for All_Grades_Students
+SAT_students <- All_Grades_Students[All_Grades_Students$hssat == "YES" & All_Grades_Students$hsact == "NO", ]
+ACT_students <- All_Grades_Students[All_Grades_Students$hsact == "YES" & All_Grades_Students$hssat == "NO", ]
+SAT_ACT_students <- All_Grades_Students[All_Grades_Students$hssat == "YES" & All_Grades_Students$hsact == "YES", ]
+
+num_SAT_students <- nrow(SAT_students)
+num_ACT_students <- nrow(ACT_students)
+num_SAT_ACT_students <- nrow(SAT_ACT_students)
+
+# Data for second pie chart
+counts2 <- c(num_ACT_students, num_SAT_students, num_SAT_ACT_students)
+labels2 <- c("ACT Only", "SAT Only", "Both SAT & ACT")
+percentages2 <- round(counts2 / sum(counts2) * 100, 1)
+labels2 <- paste(labels2, "\n", percentages2, "%")
+
+# Set graphical parameters for side-by-side plots
+par(mfrow = c(1, 2), mar = c(1, 4, 10, 4))
+
+# Pie chart for STAR_Students
+pie(counts1, labels = labels1, col = c("lightgreen", "lightblue", "lightcoral", "lightgray"),
+    main = "SAT & ACT Participation \n (All Students)")
+
+# Pie chart for All_Grades_Students
+pie(counts2, labels = labels2, col = c("lightgreen", "lightblue", "lightcoral"),
+    main = "SAT & ACT Participation \n (Subsetted Students)")
+
+# Reset graphical parameters
+par(mfrow = c(1, 1))
+
+```
+
 
 To help us utilize standardized college entrance exam scores, we need both ACT and SAT scores to be comparable (i.e. on the same scale). The ACT scores can range between 1 to 36, while the SAT scores can range between 400 to 1600 during the time of the study. While the SAT score ranges changed over time, at the time of this report, it has reverted back to the same 400-1600 scale.
 
-Converting the scores to match either exam scale will inevitably lead to some loss of information, but it is necessary for meaningful comparisons. **To minimize this loss of information**, we will keep the popular ACT composite score, `hsactcomp` (taken by 29% of students), as is and utilize the converted SAT composite to ACT score (`hsactconverted`) for the analysis.
+Converting the scores to match either exam scale will inevitably lead to some loss of information, but it is necessary for meaningful comparisons. **To minimize this loss of information**, we will keep the popular ACT composite score, `hsactcomp` (taken by 91% of subsetted students), as is and utilize the converted SAT composite to ACT score (`hsactconverted`) for the analysis.
 
 ```{r}
 variables_of_interest <- c(
   'stdntid',
-  'gender',
-  'race',
+  'gkclasstype',
+  'g1classtype',
+  'g2classtype',
+  'g3classtype',
+  'cmpstype',
+  'cmpsdura',
+  'yearsstar',
   'gktreadss',
   'gktmathss',
   'g1treadss',
@@ -632,47 +719,137 @@ variables_of_interest <- c(
   'g8treadss',
   'g8tmathss',
   'hsgpaoverall',
-  'hssatconverted',
+  'hsactcomp',
   'hsactconverted',
   'hsgrdcol'
 )
 
+# Keep variables_of_interest from All_Grades_Students
+
+subsetted_data <- All_Grades_Students %>%
+  select(all_of(variables_of_interest))
+
 ```
 
 
-## Supporting Analysis 1: Impact of Class Size on High School GPA
+## Supporting Analysis 1: Verifying Short Term Results with Subsetted Data
+
+In this section, we will verify the initial analysis results with the subset of students who have complete data for the longitudinal analysis.
+
+```{r}
+# Table of percentages and counts for class type (`cmpstype`)
+
+class_type_table <- subsetted_data %>%
+  group_by(cmpstype) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(percentage = sprintf("%.2f%%", count / sum(count) * 100))
+
+# Print using kable
+head(class_type_table) %>%
+  kable(caption = "Distribution of Class Types in Subsetted Data") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+```
+
+
+## Supporting Analysis 2: Impact of Class Size on Grades 4-8 Achievement
+
+
+## Supporting Analysis 3: Impact of Class Size on High School GPA
+
+```{r, warning=FALSE}
+
+# histogram of high school GPA
+
+gpa_hist <- ggplot(subsetted_data, aes(x = hsgpaoverall)) +
+                    geom_histogram(binwidth = 0.5, fill = "skyblue", color = "black") +
+                    labs(title = "Distribution of High School GPA",
+                         x = "High School GPA",
+                         y = "Frequency") +
+                    theme_minimal()
+# Side by side boxplots of high school GPA by class type (`cmpstype`)
+gpa_boxplot <- ggplot(subsetted_data, aes(x = cmpstype, y = hsgpaoverall)) +
+                        geom_boxplot(fill = "skyblue",
+                                      color = "black") +
+                        labs(title = "High School GPA by Class Type",
+                             x = "Class Type",
+                             y = "High School GPA") +
+                        theme_minimal()
+
+gpa_hist + gpa_boxplot
+
+```
 
 
 
 
-## Supporting Analysis 2: Impact of Class Size on College Readiness (ACT/SAT Scores)
+## Supporting Analysis 4: Impact of Class Size on College Readiness Exam (ACT/SAT Scores)
+
+We will create a new column `college_readiness` that keeps the ACT and SAT (converted to ACT scale) scores for students. If a student has taken both exams, we will use the maximum score. This combined score of college readiness exams will serve as a proxy for college readiness.
+
+```{r}
+subsetted_data <- subsetted_data %>%
+  mutate(college_readiness = pmax(hsactcomp, hsactconverted, na.rm = TRUE))
+```
 
 
-## Supporting Analysis 3: Impact of Class Size on High School Graduation Rates
+```{r}
+# Histogram of college readiness scores
+
+readiness_hist <- ggplot(subsetted_data, aes(x = college_readiness)) +
+                          geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+                          labs(title = "Distribution of College Readiness Scores",
+                               x = "College Readiness Score",
+                               y = "Frequency") +
+                          theme_minimal()
 
 
-# Model Diagnostics & Sensitivity analysis 
+# Side by side boxplots of college readiness scores by class type (`cmpstype`)
+
+readiness_boxplot <- ggplot(subsetted_data, aes(x = cmpstype, y = college_readiness)) +
+                              geom_boxplot(fill = "skyblue",
+                                            color = "black") +
+                              labs(title = "College Readiness Scores by Class Type",
+                                   x = "Class Type",
+                                   y = "College Readiness Score") +
+                              theme_minimal()
+
+readiness_hist + readiness_boxplot
+
+```
 
 
 
-# Discussion 
+## Supporting Analysis 5: Impact of Class Size on High School Graduation
+```{r}
+num_of_graduates <- subsetted_data %>%
+  filter(hsgrdcol == "YES") %>%
+  nrow()
+
+percent_graduates <- sprintf("%.2f%%", num_of_graduates / nrow(subsetted_data) * 100)
+  
+num_of_non_graduates <- subsetted_data %>%
+  filter(hsgrdcol == "NO") %>%
+  nrow()
+
+percent_non_graduates <- sprintf("%.2f%%", num_of_non_graduates / nrow(subsetted_data) * 100)
 
 
+grad_df <- data.frame(
+  Category = c("Graduated", "Not Graduated"),
+  Count = c(num_of_graduates, num_of_non_graduates),
+  Percentage = c(percent_graduates, percent_non_graduates)
+)
 
-# Acknowledgement {-}
+# Kable
 
-I acknowledge and thank my classmates Hangyu Li and Shang Chen for their helpful discussions and sharing unique approaches to the analysis.
+grad_df %>%
+  kable(caption = "High School Graduation Status of Subsetted Students") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+```
 
-# Reference {-}
-
-1. Harvard Dataverse. (n.d.). Project STAR: Student/Teacher Achievement Ratio Project. Retrieved March 4, 2025, from https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766
-
-2. Finn, J., Boyd-Zaharias, J., Fish, R., & Gerber, S. (2007, January). Project STAR and Beyond: Database User's Guide.
-
-3. Health & Education Research Operative Services (HEROS), Inc. (1999). Project STAR: Background & 1999 update. HEROS, Inc.
-
-
-# Session info {-}
 
 ```{r}
 sessionInfo()
