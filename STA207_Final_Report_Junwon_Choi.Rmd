@@ -1,8 +1,8 @@
 ---
 title: "Investigating the Short and Long-term Effects of Small Class Sizes in Early education on Student Academic Achievement"
-subtitle: "An analysis of Project STAR"
+subtitle: "An extended analysis of Project STAR"
 author: "Junwon Choi"
-date: "March 7, 2025"
+date: "March 17, 2025"
 output:
   html_document:
     df_print: paged
@@ -32,20 +32,32 @@ table: yes
 knitr::opts_chunk$set(fig.pos = 'H')
 ```
 
-Code and data files for this project are published on GitHub: [cjunwon/STA-207](https://github.com/cjunwon/STA-207)
+# How to Use this Document
 
-Initial report can be downloaded from [here](https://github.com/cjunwon/STA-207/blob/main/STA207_Initial_Analysis_Report_Junwon_Choi.html).
+The **first portion (sections 1 to 6)** of this document provides an overview of the background, motivation, and design of Project STAR, as well as the shortcomings of the study design. It is mostly similar to that covered in the initial analysis report.
 
-To skip to **key conclusions** from the initial analysis and **new results**, click [here](#key-conclusions).
+This final report adds to the initial analysis by extending the investigation to explore the long-term effects of small class sizes on student academic achievement. The **subsequent sections (7 to 10)** details procedures for addressing the new question of interest, including data preparation, variable selection, and statistical analysis.
 
-Original data source: [Harvard Dataverse: Tennessee's Student Teacher Achievement Ratio (STAR) project](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766)
+
+> To skip to **key conclusions** from the initial analysis and **new results**, click [here](#key-conclusions).
+
+Due to the vast nature of the data, there are many questions/caveats that can be explored, but this analysis will mainly focus on the long-term effects of class size on student academic achievement. Areas beyond this scope will be recognized but also noted that they are not within the scope of this analysis.
+
+## Useful Links
+
+- Code and data files for this project are published on GitHub: [cjunwon/STA-207](https://github.com/cjunwon/STA-207)
+- Initial report can be downloaded from [here](https://github.com/cjunwon/STA-207/blob/main/STA207_Initial_Analysis_Report_Junwon_Choi.html).
+- Original data source: [Harvard Dataverse: Tennessee's Student Teacher Achievement Ratio (STAR) project](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766)
 
 # Abstract
 
+This study investigates the **short and long-term effects** of **small class sizes during early education** on student academic achievement using data from Tennessee's Project STAR (Student/Teacher Achievement Ratio). Employing statistical analyses, we examine how participation in small, regular, or regular-aide classes in grades K–3 impacts students' academic performance in early elementary years, subsequent grades 4–8, high school GPA, and standardized college readiness test scores (ACT/SAT). Initial findings confirm **significant immediate benefits of smaller class sizes on early academic achievement**. However, longitudinal analyses on 407 students with complete data (detailed in the subsequent sections) reveal inconsistent or negligible long-term effects beyond grade 3, suggesting that early educational advantages related to class size may diminish over time. This research highlights critical insights into the durability of educational interventions and informs future policy decisions on class size reduction.
 
 # Introduction
 
+Educational researchers and policymakers have long debated the impact of class size on student academic achievement. Project STAR, initiated by Tennessee in the mid-1980s, was a pioneering randomized controlled trial designed explicitly to explore this issue by assigning students to small classes (13–17 students), regular classes (22–25 students), or regular classes with a full-time teacher’s aide. This landmark study provided a unique opportunity to evaluate the immediate and long-term consequences of reduced class sizes from kindergarten through third grade and subsequently tracked student outcomes through high school.
 
+This report builds upon previous analyses of Project STAR data, initially focused on immediate outcomes, by **extending the scope to examine long-term academic impacts**. Specifically, it evaluates the hypothesis that early exposure to small classes significantly affects students' academic trajectories and readiness for higher education. The study rigorously addresses limitations such as student mobility, attrition, and potential confounding factors introduced by the operational adjustments within Project STAR. By systematically assessing academic performance across multiple stages of students' educational careers, this analysis contributes to a nuanced understanding of whether early class-size reductions yield lasting academic benefits, thereby informing educational policy and future research directions.
  
 # Background & Motivation of Project STAR
 
@@ -72,6 +84,8 @@ library(tidyr)
 library(ggalluvial)
 library(plotly)
 library(patchwork)
+library(AER)
+library(broom)
 
 STAR_Students <- read.spss('dataverse_files/PROJECT STAR/STAR_Students.sav', to.data.frame=TRUE)
 # Comparison_Students <- read.spss('dataverse_files/PROJECT STAR/Comparison_Students.sav', to.data.frame=TRUE)
@@ -211,7 +225,8 @@ While the initial analysis report provided some valuable insights into the short
 
 2. **Short-term Analysis:** The initial analysis only considered the math scores of 1st-grade students, providing a snapshot of the immediate effects of class size on academic performance. While this short-term perspective is valuable, it fails to capture the long-term implications of early educational experiences. A more comprehensive analysis that tracks student outcomes over multiple grades and years would offer a more nuanced understanding of how class size influences academic trajectories. This would require a longitudinal approach that follows students beyond the early grades and into high school and beyond.
 
-3. **Operational Adjustments Post-1st Grade:** The initial analysis did not account for the operational adjustments made after the first year of the study, such as the redistribution of students between regular and regular-aide classes. While most students who were designated to small classes continued in that setting, students in regular and regular-aide classes were randomly reassigned. In an update in 1999, it was reported that class size and pupil teacher ratios (PTR) are not the same, and that PTR does **not** influence student outcomes. Therefore for further analysis, it would be more efficient and accurate to consider the class sizes as either small or regular (with and without aide together).
+Concern about **Operational Adjustments Post-1st Grade:** The initial analysis did not account for the operational adjustments made after the first year of the study, such as the redistribution of students between regular and regular-aide classes. While most students who were designated to small classes continued in that setting, students in regular and regular-aide classes were randomly reassigned. In an update in 1999, it was reported that class size and pupil teacher ratios (PTR) are not the same, and that PTR does **not** influence student outcomes. While there may be some concern about keeping kindergarten student data despite the switching, based on the researchers claims and results from the initial analysis, it is safe to assume that the switching between regular and regular-aide classes did not have a significant impact on the results. Therefore for this final analysis, we will **continue to include K-3 data**, not just grades 1-3 that had minimal switching.
+
 
 ```{r, warning=FALSE}
 data_alluvium <- subset(STAR_Students, select = c(gkclasstype, g1classtype, g2classtype, g3classtype))
@@ -394,10 +409,11 @@ p <- plot_ly(
 p
 ```
 
+In the figures above, we see a big shift between regular and regular-aide classes from kindergarten to grade 1. However, we do not consider this a significant issue. Investigating edge cases with some students switching between small and regular classes will be interesting, but is beyond the scope of this analysis.
 
 With these caveats in mind, we aim to extend the analysis of Project STAR data to explore the long-term effects of class size on student academic achievement. The natural **new question of interest** is:
 
-> **Extended question:** For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?
+> **For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?**
 
 # Answering the New Question of Interest by Addressing the Caveats
 
@@ -405,16 +421,12 @@ One more point to keep in mind is that Tennessee implemented a new student asses
 
 The user guide notes that "Scores on the CTBS are not directly comparable to those on the SATs. However, IRT scale scores were available for each CTBS subtest so that comparisons can be made meaningfully across grades 4—8." Hence the scaled scores are valid for comparison across grades 4-8.
 
-## Subsetting the Data for Appropriate Analysis
+## Subsetting the Data as New Population of Interest to Answer the Extended Question
 
-The new question of interest requires a subset of students who have completed both primary and secondary education, and that we have complete data on their academic performance and college readiness. To achieve this, we will filter the dataset to include only students who have complete data using the flags in the data file the binary flag variables indicate participation/non-participation at each stage of data collection.
+The new question of interest requires a **subset of students who have completed both primary and secondary education**, and that we have **complete data on their academic performance and college readiness**. To achieve this, we will filter the dataset to include only students who have complete data using the flags in the data file the binary flag variables indicate participation/non-participation at each stage of data collection.
 
 | Flag Type                | Variable Name     | Description                                      |
 |--------------------------|------------------|--------------------------------------------------|
-| **In-STAR Flags**        | `flagsgk`        | In STAR in kindergarten                         |
-|                          | `flagsg1`        | In STAR in grade 1                              |
-|                          | `flagsg2`        | In STAR in grade 2                              |
-|                          | `flagsg3`        | In STAR in grade 3                              |
 | **Achievement-data Flags** | `flaggk`        | Achievement data available kindergarten         |
 |                          | `flagg1`        | Achievement data available grade 1             |
 |                          | `flagg2`        | Achievement data available grade 2             |
@@ -427,8 +439,14 @@ The new question of interest requires a subset of students who have completed bo
 | **High School Data Flags** | `flagsatact`   | Valid SAT/ACT score available                   |
 |                          | `flaghscourse`   | At least two years of high school course data  |
 |                          | `flaghsgraduate` | Data on high school graduation status available |
+| **Additional STAR Indicators** | `cmpstype`   | Class type composite      10988 valid, 613 missing |
+|                          | `cmpsdura`   | Duration composite       10988 valid, 613 missing    |
 
-Our subset will require **Achievement-data Flags** and **High School Data Flags** to be "YES" for each student. This ensures that we have complete data on student achievement from kindergarten through grade 8 and high school graduation status. We should note that the question of interest is specific to students who have completed both primary and secondary education. Therefore any concerns for selection bias is beyond the scope of this analysis.
+Our subset will require **Achievement-data Flags** and **High School Data Flags** to be "YES" for each student. This ensures that we have complete data on student achievement from kindergarten through grade 8 and high school graduation status. 
+
+We also require that the composite class type and duration variables (`cmpstype` and `cmpsdura`) are not missing, as these are essential for our analysis. *Missing values* in these two variables is another caveat that can be addressed, but it is beyond the scope of this particular analysis.
+
+We should note that the question of interest is specific to students who have completed both primary and secondary education. Therefore any concerns for selection bias is beyond the scope of this analysis.
 
 ```{r}
 STAR_flag_vars <- c('FLAGSGK',
@@ -453,7 +471,11 @@ HS_College_flag_var <- c('flagsatact',
 # Subset students who have Achievement_flag_vars and HS_College_flag_var columns == 'YES'
 All_Grades_Students <- STAR_Students %>%
   filter(if_all(all_of(Achievement_flag_vars), ~ . == "YES") & 
-         if_all(all_of(HS_College_flag_var), ~ . == "YES"))
+         if_all(all_of(HS_College_flag_var), ~ . == "YES") &
+          # if `cmpstype` is not missing
+         !is.na(cmpstype) & !is.na(cmpsdura)
+         
+         )
 ```
 
 ### Data Completeness and Proportion of Students with Complete Data for Longitudinal Analysis
@@ -509,9 +531,39 @@ par(mfrow = c(1, 1))
 
 ```
 
-We notice that the proportion of students with complete data for both achievement and high school/college readiness is relatively low compared to the total number of students in the dataset. This highlights the challenges associated with longitudinal studies and the importance of data completeness for robust analyses. Despite the limitations, we are still left with **546 students** who have complete data for the longitudinal analysis.
+We notice that the proportion of students with complete data for both achievement and high school/college readiness is relatively low compared to the total number of students in the dataset. This highlights the challenges associated with longitudinal studies and the importance of data completeness for robust analyses. Despite the limitations, we are still left with **506 students** who have complete data for the longitudinal analysis.
 
-*Any results or conclusions beyond this point is based on these 546 students who have complete data for the analysis.*
+### Keeping Students who have been in a Specific Class Type for at Least 3 Years
+
+Our analysis focuses on the long-term effects of class size on student academic achievement. To ensure that we capture the cumulative impact of class size exposure, we will filter the dataset to include only students who have been in a specific class type for at least three years. Three years or more is chosen to account for the fact that kindergarten attendance was not mandatory by law or by study design. We utilize the `cmpsdura` variable, which represents the duration of exposure to a specific class type.
+
+This decision addresses several concerns:
+
+1. **Class Switching:** We noticed a small amount of class switching between all three class types (some types more than others), and ensuring that students have been in a specific class type for at least three years minimizes the impact of these switches on the analysis. In other words, we are interested in students who have not switched classes frequently.
+2. **Students who joined/dropped out of STAR:** Some students may have joined or dropped out of the STAR program during the study period. By focusing on students who have been in a specific class type for at least three years, we essentially eliminate students who have not had a consistent class type exposure.
+3. **Cumulative Impact:** The three-year threshold allows us to capture the cumulative impact of early education class size on student academic outcomes.
+
+```{r}
+cmpsdura_table_original <- All_Grades_Students %>%
+  filter(!is.na(cmpsdura)) %>%
+  group_by(cmpsdura) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(percentage = sprintf("%.2f%%", count / sum(count) * 100))
+
+head(cmpsdura_table_original) %>%
+  kable(caption = "Distribution of Duration Composite (`cmpsdura`) in K-12 Data Available Students") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+All_Grades_Students <- All_Grades_Students %>%
+  filter(cmpsdura > 2)
+```
+
+We see that a **majority** (407 students) out of the 506 students with complete data have been in a specific class type for at least three years.
+
+> *Any results or conclusions beyond this point are based on these **407 students** who have complete data for the analysis.*
+
+> As with the initial analysis, any conclusions made from this report can only be generalized to the population of students who have complete data and have been in a specific class type for at least three years and have completed their education in Tennessee.
 
 ### Variables of Interest for Longitudinal Analysis
 
@@ -548,7 +600,6 @@ We keep the following variables for the longitudinal analysis:
 | **High School Performance** | `hsgpaoverall`   |   GPA overall high school       |
 |                          | `hsactcomp`   | ACT composite score high school |
 |                          | `hsactconverted` | SAT --> ACT (test score reported in ACT composite metric) high school |
-|                          | `hsgrdcol` | High school graduation status |
 
 ```{r}
 SAT_students <- STAR_Students %>%
@@ -587,13 +638,10 @@ pie_chart4 <- plot_ly(
   hoverinfo = 'label+percent+text',
   text = ~paste0("Count: ", Count),
   marker = list(colors = c("lightblue", "lightgreen", "lightcoral", "lightgray")),
-  title = "SAT and ACT Participation (all students)",
+  title = "SAT and ACT Participation (Original Data)",
   width = 500, height = 400
 )
 
-```
-
-```{r}
 SAT_students <- All_Grades_Students %>%
   filter(hssat == "YES" & hsact == "NO")
 
@@ -634,9 +682,6 @@ pie_chart5 <- plot_ly(
   width = 500, height = 400
 )
 
-```
-
-```{r}
 # Subset data for STAR_Students
 SAT_students <- STAR_Students[STAR_Students$hssat == "YES" & STAR_Students$hsact == "NO", ]
 ACT_students <- STAR_Students[STAR_Students$hsact == "YES" & STAR_Students$hssat == "NO", ]
@@ -674,11 +719,11 @@ par(mfrow = c(1, 2), mar = c(1, 4, 10, 4))
 
 # Pie chart for STAR_Students
 pie(counts1, labels = labels1, col = c("lightgreen", "lightblue", "lightcoral", "lightgray"),
-    main = "SAT & ACT Participation \n (All Students)")
+    main = "SAT & ACT Participation \n (Original Data)")
 
 # Pie chart for All_Grades_Students
 pie(counts2, labels = labels2, col = c("lightgreen", "lightblue", "lightcoral"),
-    main = "SAT & ACT Participation \n (Subsetted Students)")
+    main = "SAT & ACT Participation \n (Subsetted Students - \n New Population)")
 
 # Reset graphical parameters
 par(mfrow = c(1, 1))
@@ -688,7 +733,7 @@ par(mfrow = c(1, 1))
 
 To help us utilize standardized college entrance exam scores, we need both ACT and SAT scores to be comparable (i.e. on the same scale). The ACT scores can range between 1 to 36, while the SAT scores can range between 400 to 1600 during the time of the study. While the SAT score ranges changed over time, at the time of this report, it has reverted back to the same 400-1600 scale.
 
-Converting the scores to match either exam scale will inevitably lead to some loss of information, but it is necessary for meaningful comparisons. **To minimize this loss of information**, we will keep the popular ACT composite score, `hsactcomp` (taken by 91% of subsetted students), as is and utilize the converted SAT composite to ACT score (`hsactconverted`) for the analysis.
+Converting the scores to match either exam scale will inevitably lead to some loss of information, but it is necessary for meaningful comparisons. **To minimize this loss of information**, we will keep the popular ACT composite score, `hsactcomp` (taken by 90% of new sample of interest), as is and utilize the converted SAT composite to ACT score (`hsactconverted`) for the analysis.
 
 ```{r}
 variables_of_interest <- c(
@@ -720,8 +765,7 @@ variables_of_interest <- c(
   'g8tmathss',
   'hsgpaoverall',
   'hsactcomp',
-  'hsactconverted',
-  'hsgrdcol'
+  'hsactconverted'
 )
 
 # Keep variables_of_interest from All_Grades_Students
@@ -729,15 +773,18 @@ variables_of_interest <- c(
 subsetted_data <- All_Grades_Students %>%
   select(all_of(variables_of_interest))
 
-```
-
-
-## Supporting Analysis 1: Verifying Short Term Results with Subsetted Data
-
-In this section, we will verify the initial analysis results with the subset of students who have complete data for the longitudinal analysis.
-
-```{r}
 # Table of percentages and counts for class type (`cmpstype`)
+
+class_type_table_original <- STAR_Students %>%
+  filter(!is.na(cmpstype)) %>%
+  group_by(cmpstype) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(percentage = sprintf("%.2f%%", count / sum(count) * 100))
+
+head(class_type_table_original) %>%
+  kable(caption = "Distribution of Class Types (`cmpstype`) in Original Data") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
 
 class_type_table <- subsetted_data %>%
   group_by(cmpstype) %>%
@@ -746,17 +793,481 @@ class_type_table <- subsetted_data %>%
 
 # Print using kable
 head(class_type_table) %>%
-  kable(caption = "Distribution of Class Types in Subsetted Data") %>%
+  kable(caption = "Distribution of Class Types (`cmpstype`) in Subsetted Data") %>%
   kable_styling(full_width = FALSE) %>%
   column_spec(1, bold = TRUE)
 
 ```
 
 
+## Supporting Analysis 1: Verifying Short Term Results with Subsetted Data
+
+In this section, we will verify the initial analysis results with the new sample/population of interest. The initial analysis used the scaled math scores of 1st-grade students to investigate the impact of class size on academic performance. The two-way ANOVA model showed that the school (`schoolid`) did not have a significant effect on math scores, while the class type (`cmpstype`) did have a significant effect. We will replicate this analysis with the new subset of students.
+
+```{r, warning=FALSE}
+# Histogram of math scaled scores for grade 1 students (original data)
+
+math_hist_original <- ggplot(STAR_Students, aes(x = g1tmathss)) +
+                          geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+                          labs(title = "Distribution of Math Scaled Scores (Grade 1)",
+                               x = "Math Scaled Score",
+                               y = "Frequency") +
+                          theme_minimal()
+
+# Histogram of math scaled scores for grade 1 students (subsetted data)
+
+math_hist_subset <- ggplot(subsetted_data, aes(x = g1tmathss)) +
+                        geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+                        labs(title = "Distribution of Math Scaled Scores (Grade 1)",
+                             x = "Math Scaled Score",
+                             y = "Frequency") +
+                        theme_minimal()
+
+# Side by side boxplots of math scaled scores by class type (`g1classtype`) for original and subsetted data
+
+math_boxplot <- ggplot(STAR_Students, aes(x = g1classtype, y = g1tmathss)) +
+                    geom_boxplot(fill = "skyblue", color = "black") +
+                    geom_jitter(width = 0.2, color = "navy", alpha = 0.05) +
+                    labs(title = "Math Scores by Class Type (Original)",
+                         x = "Class Type",
+                         y = "Math Scaled Score") +
+                    theme_minimal()
+
+math_boxplot_subset <- ggplot(subsetted_data, aes(x = g1classtype, y = g1tmathss)) +
+                          geom_boxplot(fill = "skyblue", color = "black") +
+                          geom_jitter(width = 0.2, color = "navy", alpha = 0.5) +
+                          labs(title = "Math Scores by Class Type (New)",
+                               x = "Class Type",
+                               y = "Math Scaled Score") +
+                          theme_minimal()
+
+
+
+math_hist_original + math_hist_subset
+math_boxplot + math_boxplot_subset
+```
+
+
+### One-Way ANOVA for Math Scaled Scores by Class Type
+
+We will conduct a one-way ANOVA to test the null hypothesis that the mean math scaled scores are the same across different class types in grade 1 in this new population. The alternative hypothesis is that at least one class type has a different mean math scaled score.
+
+The model is as follows:
+
+\begin{align*}
+Y_{ij} = \mu + \alpha_i + \epsilon_{ij}
+\end{align*}
+
+where:
+
+- $Y_{ij}$: Mean math scaled score for the $j$-th student in the $i$-th class type
+- $\mu$: Overall mean math scaled score
+- $\alpha_i$: Main effect of the $i$-th class type
+- $\epsilon_{ij}$: Random error in the math scaled score for the student $j$ in the $i$-th class type
+
+The independence, normality, and homoscedasticity assumptions are required for the validity of the ANOVA results.
+
+```{r}
+# Main effect plot of class type
+
+class_type_effect_plot_info <- subsetted_data %>%
+  group_by(g1classtype) %>%
+  summarise(mean_math_score = mean(g1tmathss, na.rm = TRUE),
+            SE = sd(g1tmathss, na.rm = TRUE) / sqrt(n()),
+            Lower_CI = mean_math_score - qt(0.975, n() - 1) * SE,
+            Upper_CI = mean_math_score + qt(0.975, n() - 1) * SE)
+
+class_type_effect_plot <- ggplot(class_type_effect_plot_info, aes(x = g1classtype, y = mean_math_score)) +
+                          geom_point(size = 3, color = "skyblue") +
+                          geom_line(aes(group = 1), color = "skyblue") +
+                          geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+                          labs(title = "Main Effect of Class Type on Math Scores (Grade 1)",
+                               x = "Class Type",
+                               y = "Mean Math Scaled Score") +
+                          theme_minimal()
+
+class_type_effect_plot
+
+# One-way ANOVA model
+aov1 <- aov(g1tmathss ~ g1classtype, data = subsetted_data)
+
+# Summary of ANOVA
+aov1_summary <- broom::tidy(aov1)
+
+kable(aov1_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 1) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+```
+
+Like the initial analysis, the one-way ANOVA results show that the **class type has a significant effect on math scaled scores in grade 1** for the new population of interest.
+
+In the initial analysis, the Tukey's HSD post-hoc test identified that students in small classes have significantly higher math scores compared to students in either regular or regular-aide classes. We will conduct the same post-hoc test to identify which class types have significantly different math scores in this new population.
+
+```{r}
+aov1_tukey_results <- TukeyHSD(aov1)
+
+kable(tidy(aov1_tukey_results), 
+      caption = "Tukey's HSD Post-hoc Test for Math Scaled Scores by Class Type (Grade 1) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+aov1_tukey_df <- as.data.frame(aov1_tukey_results$g1classtype)
+aov1_tukey_df$comparison <- rownames(aov1_tukey_df)
+
+colnames(aov1_tukey_df) <- c("Difference", "Lower_CI", "Upper_CI", "p_value", "Comparison")
+
+ggplot(aov1_tukey_df, aes(x = Comparison, y = Difference)) +
+  geom_point(aes(color = p_value < 0.05), size = 3) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Tukey's HSD Post-hoc Test for Math Scaled Scores by Class Type (Grade 1)",
+       x = "Class Type Comparison",
+       y = "Difference in Mean Math Scaled Scores") +
+  coord_flip() +
+  theme_minimal()
+```
+
+
+We observe that the Tukey's HSD post-hoc test results are **consistent with the initial analysis**. Students in small classes have significantly higher math scores compared to students in regular and regular-aide classes in this new population of interest.
+
+### One way ANOVA for Reading Scaled Scores by Class Type
+
+Although not covered in the initial report, we want to also verify the **short term effect of class size on reading scaled scores in grade 1** for the new population of interest.
+
+
+```{r}
+
+# One-way ANOVA model for reading scaled scores by class type (grade 1)
+aov1_reading <- aov(g1treadss ~ g1classtype, data = subsetted_data)
+
+# Summary of ANOVA
+aov1_reading_summary <- broom::tidy(aov1_reading)
+
+kable(aov1_reading_summary, caption = "ANOVA Summary for Reading Scaled Scores by Class Type (Grade 1) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+# Tukey's HSD post-hoc test for reading scaled scores by class type (grade 1)
+
+aov1_reading_tukey_results <- TukeyHSD(aov1_reading)
+
+kable(tidy(aov1_reading_tukey_results), 
+      caption = "Tukey's HSD Post-hoc Test for Reading Scaled Scores by Class Type (Grade 1) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+aov1_reading_tukey_df <- as.data.frame(aov1_reading_tukey_results$g1classtype)
+aov1_reading_tukey_df$comparison <- rownames(aov1_reading_tukey_df)
+
+colnames(aov1_reading_tukey_df) <- c("Difference", "Lower_CI", "Upper_CI", "p_value", "Comparison")
+
+ggplot(aov1_reading_tukey_df, aes(x = Comparison, y = Difference)) +
+  geom_point(aes(color = p_value < 0.05), size = 3) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Tukey's HSD Post-hoc Test for Reading Scaled Scores by Class Type (Grade 1)",
+       x = "Class Type Comparison",
+       y = "Difference in Mean Reading Scaled Scores") +
+  coord_flip() +
+  theme_minimal()
+
+```
+
+
+We can observe that the results for reading scaled scores are **consistent with the math scaled scores**. Students in small classes have significantly higher reading scores compared to students in regular and regular-aide classes in this new population of interest.
+
+### Summary of Supporting Analysis 1
+
+We see that for this **immediate (very short term) effect** of class size on academic performance, the results are **consistent with the initial analysis**.
+
+
 ## Supporting Analysis 2: Impact of Class Size on Grades 4-8 Achievement
+
+We will now investigate the impact of class size on student achievement in **grades beyond STAR (grades 4-8)**. We will focus on **reading and math scaled scores for grades 4-8** and analyze the effect of class type on these scores. Since we are now exploring effects after the STAR program, we will use `cmpstype` as the class type variable, which at this point represents the class type that the student spent at least 3-4 years in during K-3.
+
+### One-Way ANOVA for Math Scaled Scores by Class Type (Grades 4-8)
+
+We will conduct a one-way ANOVA to test the null hypothesis that the mean math scaled scores are the same across different class types in grades 4-8. The alternative hypothesis is that at least one class type has a different mean math scaled score.
+
+The model for each grade is as follows:
+
+\begin{align*}
+Y_{ij} = \mu + \alpha_i + \epsilon_{ij}
+\end{align*}
+
+where:
+
+- $Y_{ij}$: Mean math scaled score for the $j$-th student in the $i$-th class type
+- $\mu$: Overall mean math scaled score
+- $\alpha_i$: Main effect of the $i$-th class type
+- $\epsilon_{ij}$: Random error in the math scaled score for the student $j$ in the $i$-th class type
+
+The independence, normality, and homoscedasticity assumptions are required for the validity of the ANOVA results.
+
+```{r}
+## Main effects plot of class type for math scores in grade 4
+# 
+# class_type_effect_plot_info <- subsetted_data %>%
+#   group_by(cmpstype) %>%
+#   summarise(mean_g4_math = mean(g4tmathss, na.rm = TRUE),
+#             SE = sd(g4tmathss, na.rm = TRUE) / sqrt(n()),
+#             Lower_CI = mean_g4_math - qt(0.975, n() - 1) * SE,
+#             Upper_CI = mean_g4_math + qt(0.975, n() - 1) * SE)
+# 
+# class_type_effect_plot <- ggplot(class_type_effect_plot_info, aes(x = cmpstype, y = mean_g4_math)) +
+#                           geom_point(size = 3, color = "skyblue") +
+#                           geom_line(aes(group = 1), color = "skyblue") +
+#                           geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+#                           labs(title = "Main Effect of Class Type on Math Scores (Grade 4)",
+#                                x = "Class Type",
+#                                y = "Mean Math Scaled Score") +
+#                           theme_minimal()
+# 
+# class_type_effect_plot
+
+```
+
+```{r, warning=FALSE}
+# One-way ANOVA model for math scaled scores by class type (grades 4-8)
+
+aov_g4_math <- aov(g4tmathss ~ cmpstype, data = subsetted_data)
+aov_g5_math <- aov(g5tmathss ~ cmpstype, data = subsetted_data)
+aov_g6_math <- aov(g6tmathss ~ cmpstype, data = subsetted_data)
+aov_g7_math <- aov(g7tmathss ~ cmpstype, data = subsetted_data)
+aov_g8_math <- aov(g8tmathss ~ cmpstype, data = subsetted_data)
+
+# Kable for ANOVA results
+aov_g4_math_summary <- broom::tidy(aov_g4_math)
+aov_g5_math_summary <- broom::tidy(aov_g5_math)
+aov_g6_math_summary <- broom::tidy(aov_g6_math)
+aov_g7_math_summary <- broom::tidy(aov_g7_math)
+aov_g8_math_summary <- broom::tidy(aov_g8_math)
+
+kable(aov_g4_math_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 4) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g5_math_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 5) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g6_math_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 6) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g7_math_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 7) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g8_math_summary, caption = "ANOVA Summary for Math Scaled Scores by Class Type (Grade 8) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+# Line plot of mean math scores by class type for grades 4-8
+
+math_scores_by_grade <- subsetted_data %>%
+  group_by(cmpstype) %>%
+  summarise(mean_g4_math = mean(g4tmathss, na.rm = TRUE),
+            mean_g5_math = mean(g5tmathss, na.rm = TRUE),
+            mean_g6_math = mean(g6tmathss, na.rm = TRUE),
+            mean_g7_math = mean(g7tmathss, na.rm = TRUE),
+            mean_g8_math = mean(g8tmathss, na.rm = TRUE))
+
+math_scores_by_grade_long <- math_scores_by_grade %>%
+  pivot_longer(cols = starts_with("mean"), names_to = "Grade", values_to = "Mean_Math_Score")
+
+math_scores_plot1 <- ggplot(math_scores_by_grade_long, aes(x = cmpstype, y = Mean_Math_Score, color = Grade)) +
+                    geom_point(size = 3) +
+                    geom_line(aes(group = Grade)) +
+                    labs(title = "Mean Math Scaled Scores by Class Type (Grades 4-8)",
+                         x = "Class Type",
+                         y = "Mean Math Scaled Score") +
+                    theme_minimal()
+
+math_scores_by_grade <- subsetted_data %>%
+  group_by(cmpstype) %>%
+  summarise(mean_g4_math = mean(g4tmathss, na.rm = TRUE),
+            mean_g5_math = mean(g5tmathss, na.rm = TRUE),
+            mean_g6_math = mean(g6tmathss, na.rm = TRUE),
+            mean_g7_math = mean(g7tmathss, na.rm = TRUE),
+            mean_g8_math = mean(g8tmathss, na.rm = TRUE)) %>%
+  pivot_longer(cols = starts_with("mean"), 
+               names_to = "Grade", 
+               values_to = "Mean_Math_Score") %>%
+  mutate(Grade = factor(Grade,
+                        levels = c("mean_g4_math", "mean_g5_math", "mean_g6_math", "mean_g7_math", "mean_g8_math"),
+                        labels = c("4", "5", "6", "7", "8")))
+
+
+math_scores_plot2 <- ggplot(math_scores_by_grade, aes(x = Grade, y = Mean_Math_Score, group = cmpstype, color = cmpstype)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  labs(x = "Grade",
+       y = "Mean Math Scaled Score",
+       color = "Class Type") +
+  theme_minimal()
+
+math_scores_plot1 + math_scores_plot2
+
+```
+
+No significant effect of K-3 class type on math scaled scores was observed in grades 4-8 in this new population of interest. In fact, based on the clear linear trend in mean math scores by class type across grades 4-8, fitting a linear regression model would provide a better generalization that math scores increase with grade level, and that K-3 class type does not have a significant effect on math scores in grades 4-8.
+
+### One-Way ANOVA for Reading Scaled Scores by Class Type (Grades 4-8)
+
+We repeat the above analysis for reading scaled scores in grades 4-8 to investigate the impact of class type on reading achievement.
+
+```{r, warning=FALSE}
+# One-way ANOVA model for read scaled scores by class type (grades 4-8)
+
+aov_g4_read <- aov(g4treadss ~ cmpstype, data = subsetted_data)
+aov_g5_read <- aov(g5treadss ~ cmpstype, data = subsetted_data)
+aov_g6_read <- aov(g6treadss ~ cmpstype, data = subsetted_data)
+aov_g7_read <- aov(g7treadss ~ cmpstype, data = subsetted_data)
+aov_g8_read <- aov(g8treadss ~ cmpstype, data = subsetted_data)
+
+# Kable for ANOVA results
+aov_g4_read_summary <- broom::tidy(aov_g4_read)
+aov_g5_read_summary <- broom::tidy(aov_g5_read)
+aov_g6_read_summary <- broom::tidy(aov_g6_read)
+aov_g7_read_summary <- broom::tidy(aov_g7_read)
+aov_g8_read_summary <- broom::tidy(aov_g8_read)
+
+kable(aov_g4_read_summary, caption = "ANOVA Summary for Read Scaled Scores by Class Type (Grade 4) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g5_read_summary, caption = "ANOVA Summary for Read Scaled Scores by Class Type (Grade 5) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g6_read_summary, caption = "ANOVA Summary for Read Scaled Scores by Class Type (Grade 6) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g7_read_summary, caption = "ANOVA Summary for Read Scaled Scores by Class Type (Grade 7) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(aov_g8_read_summary, caption = "ANOVA Summary for Read Scaled Scores by Class Type (Grade 8) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+# Line plot of mean read scores by class type for grades 4-8
+
+read_scores_by_grade <- subsetted_data %>%
+  group_by(cmpstype) %>%
+  summarise(mean_g4_read = mean(g4treadss, na.rm = TRUE),
+            mean_g5_read = mean(g5treadss, na.rm = TRUE),
+            mean_g6_read = mean(g6treadss, na.rm = TRUE),
+            mean_g7_read = mean(g7treadss, na.rm = TRUE),
+            mean_g8_read = mean(g8treadss, na.rm = TRUE))
+
+read_scores_by_grade_long <- read_scores_by_grade %>%
+  pivot_longer(cols = starts_with("mean"), names_to = "Grade", values_to = "Mean_Read_Score")
+
+read_scores_plot1 <- ggplot(read_scores_by_grade_long, aes(x = cmpstype, y = Mean_Read_Score, color = Grade)) +
+                    geom_point(size = 3) +
+                    geom_line(aes(group = Grade)) +
+                    labs(title = "Mean Read Scaled Scores by Class Type (Grades 4-8)",
+                         x = "Class Type",
+                         y = "Mean Read Scaled Score") +
+                    theme_minimal()
+
+read_scores_by_grade <- subsetted_data %>%
+  group_by(cmpstype) %>%
+  summarise(mean_g4_read = mean(g4treadss, na.rm = TRUE),
+            mean_g5_read = mean(g5treadss, na.rm = TRUE),
+            mean_g6_read = mean(g6treadss, na.rm = TRUE),
+            mean_g7_read = mean(g7treadss, na.rm = TRUE),
+            mean_g8_read = mean(g8treadss, na.rm = TRUE)) %>%
+  pivot_longer(cols = starts_with("mean"), 
+               names_to = "Grade", 
+               values_to = "Mean_Read_Score") %>%
+  mutate(Grade = factor(Grade,
+                        levels = c("mean_g4_read", "mean_g5_read", "mean_g6_read", "mean_g7_read", "mean_g8_read"),
+                        labels = c("4", "5", "6", "7", "8")))
+
+
+read_scores_plot2 <- ggplot(read_scores_by_grade, aes(x = Grade, y = Mean_Read_Score, group = cmpstype, color = cmpstype)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  labs(x = "Grade",
+       y = "Mean Read Scaled Score",
+       color = "Class Type") +
+  theme_minimal()
+
+read_scores_plot1 + read_scores_plot2
+
+```
+
+Unlike math scaled scores, we actually observe **significant effects of class type on reading scaled scores in grades 4 and 6**. However, the **effect is not consistent across all grades**. We can run Tukey's HSD post-hoc tests to identify which class types have significantly different reading scores in grades 4 and 6.
+
+```{r, warning=FALSE}
+# Tukey's HSD post-hoc test for reading scaled scores by class type (grades 4 and 6)
+
+aov_g4_read_tukey_results <- TukeyHSD(aov_g4_read)
+aov_g6_read_tukey_results <- TukeyHSD(aov_g6_read)
+
+kable(tidy(aov_g4_read_tukey_results), 
+      caption = "Tukey's HSD Post-hoc Test for Read Scaled Scores by Class Type (Grade 4) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+kable(tidy(aov_g6_read_tukey_results), 
+      caption = "Tukey's HSD Post-hoc Test for Read Scaled Scores by Class Type (Grade 6) in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+aov_g4_read_tukey_df <- as.data.frame(aov_g4_read_tukey_results$cmpstype)
+aov_g4_read_tukey_df$comparison <- rownames(aov_g4_read_tukey_df)
+
+colnames(aov_g4_read_tukey_df) <- c("Difference", "Lower_CI", "Upper_CI", "p_value", "Comparison")
+
+g4_read_tukey <- ggplot(aov_g4_read_tukey_df, aes(x = Comparison, y = Difference)) +
+  geom_point(aes(color = p_value < 0.05), size = 3) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Tukey's HSD: Reading Scaled Scores by Class Type (Grades 4 & 6)",
+       x = "Class Type Comparison",
+       y = "Mean Read Scaled Scores Diff. (Gr 4)") +
+  # Hide legends
+  guides(color = FALSE) +
+  coord_flip() +
+  theme_minimal()
+
+aov_g6_read_tukey_df <- as.data.frame(aov_g6_read_tukey_results$cmpstype)
+aov_g6_read_tukey_df$comparison <- rownames(aov_g6_read_tukey_df)
+
+colnames(aov_g6_read_tukey_df) <- c("Difference", "Lower_CI", "Upper_CI", "p_value", "Comparison")
+
+g6_read_tukey <- ggplot(aov_g6_read_tukey_df, aes(x = Comparison, y = Difference)) +
+  geom_point(aes(color = p_value < 0.05), size = 3) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(y = "Mean Read Scaled Scores Diff. (Gr 6)",
+       # No x-axis
+       x = NULL) +
+  coord_flip() +
+  theme_minimal()
+
+g4_read_tukey + g6_read_tukey
+
+```
+
+
+We can see that in grade 4, students in small classes have significantly higher reading scores compared to students in regular and regular-aide classes. In grade 6, students in small classes have significantly higher reading scores compared to students in regular-aide classes, but not compared to students in regular classes.
+
+### Summary of Supporting Analysis 2
+
+We notice no significant effect of class type on math scaled scores in grades 4-8. However, we observe significant effects of class type on reading scaled scores in grades 4 and 6. While difficult to generalize across all grade levels, the results suggest that K-3 class type **may** have a lasting impact on reading achievement in certain grades.
 
 
 ## Supporting Analysis 3: Impact of Class Size on High School GPA
+
+We now explore further into the students' academic career, focusing on high school GPA. We will investigate the impact of K-3 class type on high school GPA.
+
 
 ```{r, warning=FALSE}
 
@@ -772,6 +1283,7 @@ gpa_hist <- ggplot(subsetted_data, aes(x = hsgpaoverall)) +
 gpa_boxplot <- ggplot(subsetted_data, aes(x = cmpstype, y = hsgpaoverall)) +
                         geom_boxplot(fill = "skyblue",
                                       color = "black") +
+                        geom_jitter(width = 0.2, color = "navy", alpha = 0.5) + 
                         labs(title = "High School GPA by Class Type",
                              x = "Class Type",
                              y = "High School GPA") +
@@ -781,8 +1293,40 @@ gpa_hist + gpa_boxplot
 
 ```
 
+We also employ a one-way ANOVA to test the null hypothesis that the mean high school GPA is the same across different class types. The alternative hypothesis is that at least one class type has a different mean high school GPA.
+
+The model is as follows:
+
+\begin{align*}
+Y_{ij} = \mu + \alpha_i + \epsilon_{ij}
+\end{align*}
+
+where:
+
+- $Y_{ij}$: High school GPA for the $j$-th student in the $i$-th class type
+- $\mu$: Overall mean high school GPA
+- $\alpha_i$: Main effect of the $i$-th class type
+- $\epsilon_{ij}$: Random error in the high school GPA for the student $j$ in the $i$-th class type
+
+The independence, normality, and homoscedasticity assumptions are required for the validity of the ANOVA results.
+
+```{r}
+# One-way ANOVA model for high school GPA by class type
+
+aov_gpa <- aov(hsgpaoverall ~ cmpstype, data = subsetted_data)
+
+# Summary of ANOVA
+
+aov_gpa_summary <- broom::tidy(aov_gpa)
+
+kable(aov_gpa_summary, caption = "ANOVA Summary for High School GPA by Class Type in New Population of Interest") %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+```
 
 
+The one-way ANOVA results show that the class type does not have a significant effect on high school GPA in this new population of interest.
 
 ## Supporting Analysis 4: Impact of Class Size on College Readiness Exam (ACT/SAT Scores)
 
@@ -793,6 +1337,7 @@ subsetted_data <- subsetted_data %>%
   mutate(college_readiness = pmax(hsactcomp, hsactconverted, na.rm = TRUE))
 ```
 
+Similar to the previous analyses, we will investigate the impact of K-3 class type on college readiness scores using a one-way ANOVA.
 
 ```{r}
 # Histogram of college readiness scores
@@ -810,6 +1355,7 @@ readiness_hist <- ggplot(subsetted_data, aes(x = college_readiness)) +
 readiness_boxplot <- ggplot(subsetted_data, aes(x = cmpstype, y = college_readiness)) +
                               geom_boxplot(fill = "skyblue",
                                             color = "black") +
+                              geom_jitter(width = 0.2, color = "navy", alpha = 0.5) +  
                               labs(title = "College Readiness Scores by Class Type",
                                    x = "Class Type",
                                    y = "College Readiness Score") +
@@ -819,37 +1365,165 @@ readiness_hist + readiness_boxplot
 
 ```
 
+The one-way ANOVA model for college readiness scores by class type is as follows:
 
+\begin{align*}
+Y_{ij} = \mu + \alpha_i + \epsilon_{ij}
+\end{align*}
 
-## Supporting Analysis 5: Impact of Class Size on High School Graduation
+where:
+
+- $Y_{ij}$: College readiness score for the $j$-th student in the $i$-th class type
+- $\mu$: Overall mean college readiness score
+- $\alpha_i$: Main effect of the $i$-th class type
+- $\epsilon_{ij}$: Random error in the college readiness score for the student $j$ in the $i$-th class type
+
+The independence, normality, and homoscedasticity assumptions are required for the validity of the ANOVA results.
+
 ```{r}
-num_of_graduates <- subsetted_data %>%
-  filter(hsgrdcol == "YES") %>%
-  nrow()
+# One-way ANOVA model for college readiness scores by class type
 
-percent_graduates <- sprintf("%.2f%%", num_of_graduates / nrow(subsetted_data) * 100)
-  
-num_of_non_graduates <- subsetted_data %>%
-  filter(hsgrdcol == "NO") %>%
-  nrow()
+aov_readiness <- aov(college_readiness ~ cmpstype, data = subsetted_data)
 
-percent_non_graduates <- sprintf("%.2f%%", num_of_non_graduates / nrow(subsetted_data) * 100)
+# Summary of ANOVA
 
+aov_readiness_summary <- broom::tidy(aov_readiness)
 
-grad_df <- data.frame(
-  Category = c("Graduated", "Not Graduated"),
-  Count = c(num_of_graduates, num_of_non_graduates),
-  Percentage = c(percent_graduates, percent_non_graduates)
-)
-
-# Kable
-
-grad_df %>%
-  kable(caption = "High School Graduation Status of Subsetted Students") %>%
+kable(aov_readiness_summary, caption = "ANOVA Summary for College Readiness Scores by Class Type in New Population of Interest") %>%
   kable_styling(full_width = FALSE) %>%
   column_spec(1, bold = TRUE)
+
 ```
 
+Again, the one-way ANOVA results show that the K-3 class type does not have a significant effect on college readiness scores in this new population of interest.
+
+# Summary of Supporting Analyses
+
+1. **Immediate (Very Short Term) Effect of Class Size on Academic Performance**: The results are consistent with the initial analysis, showing that students in small classes have significantly higher math scores compared to students in regular and regular-aide classes.
+
+2. **Impact of Class Size on Grades 4-8 Achievement**: No significant effect of K-3 class type on math scaled scores in grades 4-8 was observed. However, significant effects of class type on reading scaled scores were observed in grades 4 and 6. Due to the inconsistency across grades, generalizing the effect of K-3 class type on reading achievement is challenging.
+
+3. **Impact of Class Size on High School Achievement**: The class type does not have a significant effect on high school GPA or college readiness scores in this new population of interest.
+
+
+## Answering the Extended Research Question and Discussion
+
+The extended research question was:
+
+> **For students who complete both primary and secondary education with the objective of pursuing higher education (college), does the exposure to small class sizes in early education (K-3) have a significant impact on their high school academic performance and college readiness?**
+
+Based on the supporting analyses conducted, we can conclude that the effects of class size on student achievement **do not persist beyond the early grades (K-3)** to significantly influence high school GPA or college readiness in this new population of interest. While there were some significant effects on reading scores in grades 4 and 6, the overall impact on high school GPA and college readiness was not significant.
+
+The results suggest that while small class sizes may have immediate short-term benefits on academic performance, these effects do not appear to have a lasting impact on high school academic achievement or college readiness. Other factors, such as individual student characteristics, school resources, and teaching quality, may play a more significant role in determining high school GPA and college readiness. These are interesting areas that may be more fit for an observational study to explore the complex interplay of various factors on long-term academic outcomes.
+
+# Notes on Causal Effects
+
+Ideally, we'd like to draw causal conclusions about the impact of K-3 class type on student achievement. For causal inference to be valid, the following assumptions must be satisfied:
+
+1. **Random Assignment (Ignorability):**
+
+   - Project STAR's randomized controlled trial design ensures that students and teachers were randomly assigned to class types (small, regular, regular with aide). Randomization ideally removes biases stemming from selection effects, making the treatment (class size) independent of potential confounders.
+   - However, operational adjustments after kindergarten (redistribution between regular and regular-aide classes) might introduce minor complications. Our analysis mitigates this by focusing on students who experienced consistent class types for at least three years.
+
+2. **Stable Unit Treatment Value Assumption (SUTVA):**
+
+   - SUTVA requires that the outcome for one student is unaffected by the class assignment of other students. In the context of Project STAR, this assumption might be violated if there are peer effects across classrooms or schools. For example, teachers sharing resources or strategies between class types could potentially blur treatment distinctions.
+   - Given the controlled randomization within each school, and the relatively small scale of class sizes in the small-class condition, peer effects across class types likely have limited impact, thus reasonably satisfying SUTVA.
+
+3. **Consistency:**
+
+   - Consistency assumes that the treatment definition is stable and consistent across participants. Project STAR clearly defines treatments (class sizes and presence or absence of aides). Nevertheless, minor variations in classroom management and instructional quality could exist. The extent of these variations was minimized through standardized procedures, enhancing the consistency assumption.
+
+4. **Positivity:**
+
+   - Positivity requires a non-zero probability of assignment to each treatment for all individuals in the population. This was ensured by Project STAR's randomized design, with all eligible students equally likely to be assigned to any class type at enrollment.
+
+### Evaluating the Validity of Causal Conclusions
+
+Given the robustness of Project STAR’s experimental design, we can reasonably interpret observed effects, particularly **immediate short-term impacts**, as causal. The significant short-term effect of smaller class sizes on student math achievement is credible.
+
+However, for the longer-term effects (grades 4–8 and beyond), causal interpretations become less straightforward due to:
+
+- **Attrition and Missing Data:** Students who dropped out or did not complete all assessments could bias longitudinal results. While our analysis restricts the population to students with complete longitudinal data, this selectivity introduces potential biases.
+- **Diminishing Treatment Effect:** The lack of significant sustained effects beyond early grades may indicate a dilution of the treatment effect over time or increasing influence from other environmental and educational factors.
+
+### Conclusion on Causality
+
+In summary, while the assumptions for causal inference are **largely satisfied, particularly in the short-term analysis** due to the randomized controlled trial design, **cautious interpretation is advised for long-term causal claims**. Immediate effects of small class sizes can be confidently viewed as causal, but long-term academic outcomes should be interpreted with consideration of potential attrition biases and external educational factors.
+
+
+# Model Diagnostics
+
+<details>
+  <summary>Click to expand model diagnostics</summary>
+
+The following section plots all the diagnostic plots for all the ANOVA models conducted in the supporting analyses. These plots help us assess the validity of the ANOVA results by checking the assumptions of independence, normality, and homoscedasticity.
+
+```{r}
+# Model Diagnostics
+
+# Set graphical parameters
+par(mfrow = c(3, 2), mar = c(4, 4, 2, 1))
+
+# List of ANOVA models
+anova_models <- list(
+  "Grade 1 Math" = aov1,
+  "Grade 4 Math" = aov_g4_math,
+  "Grade 5 Math" = aov_g5_math,
+  "Grade 6 Math" = aov_g6_math,
+  "Grade 7 Math" = aov_g7_math,
+  "Grade 8 Math" = aov_g8_math,
+  "Grade 4 Reading" = aov_g4_read,
+  "Grade 5 Reading" = aov_g5_read,
+  "Grade 6 Reading" = aov_g6_read,
+  "Grade 7 Reading" = aov_g7_read,
+  "Grade 8 Reading" = aov_g8_read,
+  "High School GPA" = aov_gpa,
+  "College Readiness" = aov_readiness
+)
+
+# Loop through models and generate diagnostics
+for (model_name in names(anova_models)) {
+  model <- anova_models[[model_name]]
+
+  # Residuals vs. Fitted
+  plot(model$fitted.values, resid(model),
+       main = paste(model_name, "- Residuals vs Fitted"),
+       xlab = "Fitted Values", ylab = "Residuals", pch = 19,
+       col = rgb(0, 0, 1, alpha = 0.5))
+  abline(h = 0, col = "red", lwd = 1.5, lty = 2)
+
+  # QQ Plot
+  qqnorm(resid(model), main = paste(model_name, "- Normal Q-Q"), pch = 19,
+         col = rgb(0, 0.5, 0, alpha = 0.5))
+  qqline(resid(model), col = "red", lwd = 1.5, lty = 2)
+}
+
+# Reset graphical parameters
+par(mfrow = c(1, 1))
+
+```
+
+We note that based on these plots, not all variables satisfy the assumptions of normality and homoscedasticity. This further emphasizes the need for caution in interpreting the ANOVA results, particularly for long-term effects.
+
+# Acknowledgement
+
+I acknowledge and thank my classmates Hangyu Li and Shang Chen for their helpful discussions and sharing unique approaches to the analysis.
+
+# References
+
+1. Achilles, C. M., Bain, H. P., Bellott, F., Boyd-Zaharias, J., Finn, J., Folger, J., Johnston, J., & Word, E. (2008). Tennessee's Student Teacher Achievement Ratio (STAR) project [Data set]. Harvard Dataverse. https://doi.org/10.7910/DVN/SIWH9F
+
+2. C.M. Achilles; Helen Pate Bain; Fred Bellott; Jayne Boyd-Zaharias; Jeremy Finn; John Folger; John Johnston; Elizabeth Word, 2008, "Tennessee's Student Teacher Achievement Ratio (STAR) project", https://doi.org/10.7910/DVN/SIWH9F, Harvard Dataverse, V1; Project STAR K-3
+
+3. C.M. Achilles; Helen Pate Bain; Fred Bellott; Jayne Boyd-Zaharias; Jeremy Finn; John Folger; John Johnston; Elizabeth Word, 2008, "Tennessee's Student Teacher Achievement Ratio (STAR) project", https://doi.org/10.7910/DVN/SIWH9F, Harvard Dataverse, V1; STAR follow-up Studies (1996-1997) Report
+
+4. C.M. Achilles; Helen Pate Bain; Fred Bellott; Jayne Boyd-Zaharias; Jeremy Finn; John Folger; John Johnston; Elizabeth Word, 2008, "Tennessee's Student Teacher Achievement Ratio (STAR) project", https://doi.org/10.7910/DVN/SIWH9F, Harvard Dataverse, V1; starUsersGuide.pdf
+
+4. Hernán, M. A., & Robins, J. M. (2025). Causal inference: What if (1st ed.). Chapman & Hall/CRC. https://www.hsph.harvard.edu/miguel-hernan/causal-inference-book/
+
+
+# Session Information
 
 ```{r}
 sessionInfo()
